@@ -1,131 +1,85 @@
 from __future__ import annotations
 from enum import Enum
 from pydantic import BaseModel
-from abc import ABC, abstractmethod
 
+"""
+This File hods different Classes that serve as Blueprints, Models or Datastructures for the Engine.
+The Focus lies mainly in having consistent and readable code.
+"""
 
-# Enum for chess pieces
-class ChessPieceType(Enum):
-    PAWN = "P"
-    BISHOP = "B"
-    KNIGHT = "N"
-    ROOK = "R"
-    QUEEN = "Q"
-    KING = "K"
-
-
-# Enum for chess colors black and white
 class ChessColor(Enum):
     BLACK = 0
     WHITE = 1
 
 
-# Class for representing a board position
+class ChessMove(BaseModel):
+    piece: Pawn | Knight | Bishop | Rook | Queen | King
+    origin: Coordinate
+    target: Coordinate
+
+
 class Coordinate(BaseModel):
     x: int
     y: int
 
-
-
-# Parent class
-class Piece:
-    def __init__(self, piece_type: ChessPieceType):
-        self.piece_type = piece_type
-        
-
-    # Interface for children classes, since each child moves differently (Pawns, rooks, etc.)
-    @abstractmethod
-    def move(origin: Coordinate, target: Coordinate, board):
-        pass
-
-
      
-# Child Classes
-class Pawn(Piece):
+
+###############################################################################
+# Each of the following classes represents a Piece.                      
+# The usefulness of these will determine wheter they will stay.        
+###############################################################################
+
+
+class Pawn():
     def __init__(self, color: ChessColor):
-        super().__init__(piece_type = ChessPieceType.PAWN)
-
-        self.fen_char = "p"
-        self.color = color
-        self.piece_value = 100 # TODO ADD CONSTANTS TABLE FOR VALUES
-
-
-    # Moving from x1,y1 to x2,y2 on the board
-    def move(origin: Coordinate, target: Coordinate, board):
-        pass
+        self.fen_char: str = "p"
+        self.color: ChessColor = color
+        self.piece_value: int = 100 # TODO ADD CONSTANTS TABLE FOR VALUES
+        self.pinned: bool = False
 
 
-class Bishop(Piece):
+
+class Bishop():
     def __init__(self, color: ChessColor):
-        super().__init__(piece_type = ChessPieceType.BISHOP)
-
         self.fen_char = "b"
         self.color = color
         self.piece_value = 300 # TODO ADD CONSTANTS TABLE FOR VALUES
+        self.pinned: bool = False
 
 
-    # Moving from x1,y1 to x2,y2 on the board
-    def move(origin: Coordinate, target: Coordinate, board):
-        pass
 
-
-class Knight(Piece):
+class Knight():
     def __init__(self, color: ChessColor):
-        super().__init__(piece_type = ChessPieceType.KNIGHT)
-
-        self.fen_char = "n"
-        self.color = color
-        self.piece_value = 300 # TODO ADD CONSTANTS TABLE FOR VALUES
-
-
-    # Moving from x1,y1 to x2,y2 on the board
-    def move(origin: Coordinate, target: Coordinate, board):
-        pass
+        self.fen_char: str = "n"
+        self.color: ChessColor = color
+        self.piece_value: int = 300 # TODO ADD CONSTANTS TABLE FOR VALUES
+        self.pinned: bool = False
 
 
-class Rook(Piece):
+
+class Rook():
     def __init__(self, color: ChessColor):
-        super().__init__(piece_type = ChessPieceType.ROOK)
-
-        self.fen_char = "r"
-        self.color = color
-        self.piece_value = 500 # TODO ADD CONSTANTS TABLE FOR VALUES
-
-
-    # Moving from x1,y1 to x2,y2 on the board
-    def move(origin: Coordinate, target: Coordinate, board):
-        pass
+        self.fen_char: str = "r"
+        self.color: ChessColor = color
+        self.piece_value: int = 500 # TODO ADD CONSTANTS TABLE FOR VALUES
+        self.pinned: bool = False
 
 
 
-class Queen(Piece):
+class Queen():
     def __init__(self, color: ChessColor):
-        super().__init__(piece_type = ChessPieceType.PAWN)
-
-        self.fen_char = "q"
-        self.color = color
-        self.piece_value = 900 # TODO ADD CONSTANTS TABLE FOR VALUES
-
-
-    # Moving from x1,y1 to x2,y2 on the board
-    def move(origin: Coordinate, target: Coordinate, board):
-        pass
+        self.fen_char: str = "q"
+        self.color: ChessColor = color
+        self.piece_value: int = 900 # TODO ADD CONSTANTS TABLE FOR VALUES
+        self.pinned: bool = False
 
 
-class King(Piece):
+
+class King():
     def __init__(self, color: ChessColor):
-        super().__init__(piece_type = ChessPieceType.PAWN)
-
-        self.fen_char = "k"
-        self.color = color
-        self.piece_value = 5000 # TODO ADD CONSTANTS TABLE FOR VALUES
-
-
-    # Moving from x1,y1 to x2,y2 on the board
-    def move(origin: Coordinate, target: Coordinate, board):
-        pass
-
-
-
-
-
+        self.fen_char: str = "k"
+        self.color: ChessColor = color
+        self.piece_value: int = 5000 # TODO ADD CONSTANTS TABLE FOR VALUES
+        self.pinned: bool = False
+        self.in_check: bool = False
+        self.checkmated: bool = False
