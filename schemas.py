@@ -45,6 +45,7 @@ class Pawn(Piece):
     def __init__(self, color: ChessColor):
         super().__init__(piece_type = ChessPieceType.PAWN)
 
+        self.fen_char = "p"
         self.color = color
         self.piece_value = 100 # TODO ADD CONSTANTS TABLE FOR VALUES
 
@@ -58,6 +59,7 @@ class Bishop(Piece):
     def __init__(self, color: ChessColor):
         super().__init__(piece_type = ChessPieceType.BISHOP)
 
+        self.fen_char = "b"
         self.color = color
         self.piece_value = 300 # TODO ADD CONSTANTS TABLE FOR VALUES
 
@@ -71,6 +73,7 @@ class Knight(Piece):
     def __init__(self, color: ChessColor):
         super().__init__(piece_type = ChessPieceType.KNIGHT)
 
+        self.fen_char = "n"
         self.color = color
         self.piece_value = 300 # TODO ADD CONSTANTS TABLE FOR VALUES
 
@@ -84,6 +87,7 @@ class Rook(Piece):
     def __init__(self, color: ChessColor):
         super().__init__(piece_type = ChessPieceType.ROOK)
 
+        self.fen_char = "r"
         self.color = color
         self.piece_value = 500 # TODO ADD CONSTANTS TABLE FOR VALUES
 
@@ -98,6 +102,7 @@ class Queen(Piece):
     def __init__(self, color: ChessColor):
         super().__init__(piece_type = ChessPieceType.PAWN)
 
+        self.fen_char = "q"
         self.color = color
         self.piece_value = 900 # TODO ADD CONSTANTS TABLE FOR VALUES
 
@@ -111,6 +116,7 @@ class King(Piece):
     def __init__(self, color: ChessColor):
         super().__init__(piece_type = ChessPieceType.PAWN)
 
+        self.fen_char = "k"
         self.color = color
         self.piece_value = 5000 # TODO ADD CONSTANTS TABLE FOR VALUES
 
