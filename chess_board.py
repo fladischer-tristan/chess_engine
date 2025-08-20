@@ -4,82 +4,92 @@ from schemas import ChessPieceType, ChessColor
 
 class Board():
 
-
-    # fen char dictionary
+    # fen dictionary
     fen_keys = {
-        "PAWN" : "b",
-        "BISHOP" : "l",
-        "KNIGHT" : "s",
-        "ROOK" : "t",
-        "QUEEN" : "f",
-        "KING" : "k"
+        "p": Pawn,
+        "b": Bishop,
+        "n": Knight,
+        "r": Rook,
+        "q": Queen,
+        "k": King
     }
 
     # Chess starting position represented as FEN
     # https://de.wikipedia.org/wiki/Forsyth-Edwards-Notation
 
-    starting_fen = "tslfklst/bbbbbbbbbb/8/8/8/8/BBBBBBBBBB/TSLDKLST"
-
+    starting_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR" 
 
 
     def __init__(self):
-        # Initialize chess board
+        # Chess Board
+        # A 2D Array. Each element is either None, or holds a piece Object
         self.board = [[None for _ in range(8)] for x in range(8)]
 
 
-    # Update the board using a fen as input
-    def fen_parser(self, fen: str):
-        row_index, col_index = 0, 0
 
+    def fen_parser(self, fen: str):
+        """
+        Convert a FEN into a chess position using our board.
+        """
+        row_index, col_index = 0, 0
+        iteration = 0
 
         for char in fen:
-            char_is_lower = True if char.islower() else False
-            print(char_is_lower)
+            iteration += 1
 
-
-            # Integer found - skip n fields (set board tile to none)
-            try: 
+            # Integer
+            if char.isdigit():
                 num = int(char)
                 for i in range(num):
-                    print(i)
-                    self.board[row_index][col_index + i] = None
-            except ValueError:
-                pass
+                    self.board[row_index][col_index] = None
+                    col_index += 1
+                continue
 
-
-            # "/" found (new line)
+            # Slash
             if char == "/":
                 row_index += 1
                 col_index = 0
-                print(char)
+                continue
 
-            # Piece found - Set board tile to piece type
-            else:
-                for key, value in self.fen_keys.items():
-                    if char.lower() == value or char.lower() == "d":
-                        print(f"FOUND: {key} : {value}")
+            # Letter
+            if char.lower() in self.fen_keys:
+                piece_class = self.fen_keys[char.lower()]
+                color = ChessColor.WHITE if char.isupper() else ChessColor.BLACK
+                self.board[row_index][col_index] = piece_class(color)
+                col_index += 1
 
-                        if value == "b":
-                            piece = Pawn(ChessColor.WHITE if char_is_lower else ChessColor.BLACK)
-                        elif value == "l":
-                            piece = Bishop(ChessColor.WHITE if char_is_lower else ChessColor.BLACK)
-                        elif value == "s":
-                            piece = Knight(ChessColor.WHITE if char_is_lower else ChessColor.BLACK)
-                        elif value == "t":
-                            piece = Rook(ChessColor.WHITE if char_is_lower else ChessColor.BLACK)
-                        elif value == "f" or char.lower() == "d":
-                            piece = Queen(ChessColor.WHITE if char_is_lower else ChessColor.BLACK)
-                        elif value == "k":
-                            piece = King(ChessColor.WHITE if char_is_lower else ChessColor.BLACK)
 
-                        # SET PIECE
-                        self.board[row_index][col_index] = piece
 
-                        if col_index < 7:
-                            col_index += 1
+
+    def print_board(self):
+        """
+        Prints the current board to terminal.
+        """
+        counter = 0
+        for y, row in enumerate(self.board):
+            for x, col in enumerate(row):
+                if counter % 8 == 0:
+                    print()
+
+                if self.board[y][x] == None:
+                    print(".", end=" ")    
+
+                else: 
+                    for key, value in self.fen_keys.items():
+                        if self.board[y][x].fen_char == key:
+                            if self.board[y][x].color == ChessColor.WHITE:
+                                print(key.upper(), end=" ")
+                                break
+                            else:
+                                print(key.lower(), end=" ")
+                                break
+
+                counter = counter + 1
+                
+                
+
 
 
 brd = Board()
-
 brd.fen_parser(brd.starting_fen)
-print(brd.board)
+brd.print_board()
