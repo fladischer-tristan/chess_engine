@@ -1,6 +1,7 @@
 from __future__ import annotations
 from enum import Enum
 from pydantic import BaseModel
+from typing import NamedTuple
 
 """
 This File hods different Classes that serve as Blueprints, Models or Datastructures for the Engine.
@@ -12,13 +13,22 @@ class ChessColor(Enum):
     WHITE = 1
 
 
+class PromotionPiece(Enum):
+    BISHOP = "B"
+    KNIGHT ="N"
+    ROOK = "R"
+    QUEEN = "Q"
+
+
+
 class ChessMove(BaseModel):
-    piece: Pawn | Knight | Bishop | Rook | Queen | King
     origin: Coordinate
     target: Coordinate
+    promotion: None | PromotionPiece = None
 
 
-class Coordinate(BaseModel):
+
+class Coordinate(NamedTuple):
     x: int
     y: int
 
