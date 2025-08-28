@@ -17,7 +17,7 @@ coordinate_map = {
 
 
 
-def long_algebraic_to_move(long_alg_move: str, turn: ChessColor) -> ChessMove:
+def long_algebraic_to_move(long_alg_move: str) -> ChessMove:
         """
         Convert a string in long algebraic notation to an internal ChessMove
 
@@ -83,4 +83,4 @@ def move_to_long_algebraic(move: ChessMove) -> str:
 
 
 if __name__ == '__main__':
-        long_algebraic_to_move("a2=a4", ChessColor.WHITE)
+        long_algebraic_to_move("e2-e4")

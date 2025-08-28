@@ -1,5 +1,6 @@
 from schemas import Pawn, Bishop, Knight, Rook, Queen, King
 from schemas import ChessColor, ChessMove, Coordinate
+from utils import long_algebraic_to_move
 from typing import List
 import numpy as np
 import time
@@ -124,12 +125,16 @@ class Position():
 
 
 
-    def move(self, algebraic_move: str, color: ChessColor) -> ChessMove:
+    def move(self, move: ChessMove):
         """
-        Translates the input string (in the format of the algebraic-notation) into a move on the internal board.
+        Play a ChessMove and update board.
         """
-        #TODO
-        pass
+        fen_char = self.board[move.origin.y][move.origin.x].fen_char
+        color = self.board[move.origin.y][move.origin.x].color
+        self.board[move.origin.y][move.origin.x] = None
+        self.board[move.target.y][move.target.x] = self.fen_map[fen_char](color)
+        
+        
     
 
 
@@ -206,3 +211,11 @@ if __name__ == '__main__':
     brd.update_attacked_fields()
     print(f"white attacks: {len(brd.attacked_fields_white)} positions")
     print(f"black attacks: {len(brd.attacked_fields_black)} positions")
+
+    while True:
+        new_move = long_algebraic_to_move(str(input("Please enter a move: ")))
+        brd.move(new_move)
+        brd.update_attacked_fields()
+        brd.print_board()
+        print(f"white attacks: {len(brd.attacked_fields_white)} positions")
+        print(f"black attacks: {len(brd.attacked_fields_black)} positions")
