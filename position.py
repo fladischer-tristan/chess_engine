@@ -9,6 +9,8 @@ import time
 class Position():
     """
     Represents a chess Position.
+    Implements functionality to manipulate the position (move()) and search for moves (find_pseudo_legal_moves() etc.)
+    Is compatible with FEN and long-algebraic-notations
     """
     
     # fen dictionary to map fen keys to our Piece Objects
@@ -25,7 +27,7 @@ class Position():
     N, E, S, W = np.array([0, -1]), np.array([1, 0]), np.array([0, 1]), np.array([-1, 0])
 
     move_directions = {
-        "p" : (N, N+E, N+W, N+N),
+        "p" : (N, N+N, N+E, N+W),
         "n" : (N+N+E, N+N+W, E+E+N, E+E+S, S+S+E, S+S+W, W+W+N, W+W+S),
         "b" : (N+E, N+W, S+E, S+W),
         "r" : (N, E, S, W),
@@ -47,7 +49,7 @@ class Position():
 
 
 
-    def __init__(self, fen: str):
+    def __init__(self, fen: str) -> None:
         # Chess Board
         # A 2D Array. Each element is either None, or a piece Object
         self.board: List[List[None | Pawn | Knight | Bishop | Rook | Queen | King]] = [[None for _ in range(8)] for x in range(8)]
@@ -65,16 +67,25 @@ class Position():
 
 
 
-    def update_attacked_fields(self):
+
+    ###############################################################################
+    # Find out how many squares each Piece "sees" and updates the instance lists.
+    # This might be useful to find Pinned pieces, though this function might be
+    # removed if it proves useless. Some functionality might be similar to other
+    # methods in this class and so, obsolete.                   
+    # TODO Currently, the Pawns only check for their northern coordinates (which
+    # only white should do). Need to add offset inversion so that black Pawns only 
+    # check southern directions and white Pawns only check northern ones
+    ###############################################################################
+
+    def update_attacked_fields(self) -> None:
         start = time.perf_counter() # DEBUG
         attacked_fields_black: List[Coordinate] = []
         attacked_fields_white: List[Coordinate] = []
 
-
         for y, row in enumerate(self.board):
             for x, col in enumerate(row):
                 piece = self.board[y][x]
-                
                 if piece == None:
                     continue
 
@@ -91,10 +102,8 @@ class Position():
                             new_x, new_y = x + dx, y + dy
                             if 0 <= new_x < 8 and 0 <= new_y < 8:
                                 attack_list.append(Coordinate(x=new_x, y=new_y))
-
                         else: # Sliding Pieces
                             new_x, new_y = x + dx, y + dy
-
                             # Multiple attacked fields in the same direction
                             while 0 <= new_x < 8 and 0 <= new_y < 8:
                                 attack_list.append(Coordinate(x=new_x, y=new_y))
@@ -103,17 +112,54 @@ class Position():
                                 new_x += dx
                                 new_y += dy
 
+        # NOTE might need deepcopy instead of assignment here
         self.attacked_fields_black = attacked_fields_black
         self.attacked_fields_white = attacked_fields_white
-
         # DEBUG
         print(f"elapsed time in 'update_attacked_fields()': {time.perf_counter() - start}")
 
 
 
+
+
+    def find_pseudo_legal_moves(self, turn: ChessColor) -> List[ChessMove]:
+        """
+        Return all pseudo_legal moves in current position
+        https://www.chessprogramming.org/Pseudo-Legal_Move
+
+        This will probably end up being a god method, needs to be refactored later
+        """
+
+        # get all pieces that match color
+        pieces = [piece for row in self.board for piece in row if piece is not None and piece.color == turn]
+
+
+        for y, row in enumerate(self.board):
+            for x, col in enumerate(row):
+                piece = self.board[y][x]
+                if piece in pieces:
+
+                    # Mainloop where the moves should be extracted and checked
+                    piece_type = piece.fen_char
+                    offsets = self.move_directions[piece_type]
+
+                    if piece_type == 'p':
+                        if turn == ChessColor.WHITE:
+                            for i, (dx, dy) in enumerate(offsets):
+                                nx, ny = x + dx, y + dy
+                                print(f"at coor: {x}, {y} new pos is: x:{nx}, y={ny}")
+
+                                # TODO
+                                raise NotImplementedError
+
+
+
+
+
+
     def find_legal_moves(self) -> List[ChessMove]:
         """
-        Return all legal moves in current position
+        Filter the true legal moves out of our pseudo-legal-ones
         """
         for y, row in enumerate(self.board):
             for x, col in enumerate(row):
@@ -125,21 +171,22 @@ class Position():
 
 
 
-    def move(self, move: ChessMove):
+    def move(self, move: ChessMove) -> None:
         """
-        Play a ChessMove and update board.
+        Play a ChessMove on the board.
         """
-        fen_char = self.board[move.origin.y][move.origin.x].fen_char
-        color = self.board[move.origin.y][move.origin.x].color
+        piece = self.board[move.origin.y][move.origin.x]
+        fen_char = piece.fen_char
+        color = piece.color
         self.board[move.origin.y][move.origin.x] = None
-        self.board[move.target.y][move.target.x] = self.fen_map[fen_char](color)
+        self.board[move.target.y][move.target.x] = piece
         
         
     
 
 
 
-    def fen_to_position(self, fen: str):
+    def fen_to_position(self, fen: str) -> None:
         """
         Translates a FEN into a chess position on the internal board.
         https://de.wikipedia.org/wiki/Forsyth-Edwards-Notation
@@ -170,7 +217,7 @@ class Position():
                 col_index += 1
 
 
-    def position_to_fen():
+    def position_to_fen(self) -> str:
         """
         Generates fen based on current position
         """
@@ -219,3 +266,4 @@ if __name__ == '__main__':
         brd.print_board()
         print(f"white attacks: {len(brd.attacked_fields_white)} positions")
         print(f"black attacks: {len(brd.attacked_fields_black)} positions")
+        brd.find_pseudo_legal_moves(ChessColor.WHITE)

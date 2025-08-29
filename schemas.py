@@ -4,8 +4,8 @@ from pydantic import BaseModel
 from typing import NamedTuple
 
 """
-This File hods different Classes that serve as Blueprints, Models or Datastructures for the Engine.
-The Focus lies mainly in having consistent and readable code.
+This File declares different Classes that serve as Blueprints, Models or Datastructures for the Engine.
+NO LOGIC in this file. Focus is on clean and somewhat modular code
 """
 
 class ChessColor(Enum):
@@ -36,7 +36,7 @@ class Coordinate(NamedTuple):
 
 ###############################################################################
 # Each of the following classes represents a Piece.                      
-# The usefulness of these will determine wheter they will stay.        
+# NOTE: Some attributes might not be useful. Might get refactored     
 ###############################################################################
 
 
@@ -73,6 +73,7 @@ class Rook():
         self.color: ChessColor = color
         self.piece_value: int = 500 # TODO ADD CONSTANTS TABLE FOR VALUES
         self.pinned: bool = False
+        self.has_moved: bool = False
 
 
 
@@ -92,4 +93,5 @@ class King():
         self.piece_value: int = 5000 # TODO ADD CONSTANTS TABLE FOR VALUES
         self.pinned: bool = False
         self.in_check: bool = False
+        self.has_moved: bool = False
         self.checkmated: bool = False
