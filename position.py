@@ -64,6 +64,9 @@ class Position():
         # Set board to input fen
         self.fen_to_position(fen)
 
+        # When a Pawn double moves, the square in the middle will be stored here (allows simple en passant logic)
+        self.en_passant_square: Coordinate | None = None
+
 
 
 
@@ -133,27 +136,113 @@ class Position():
         # get all pieces that match color
         pieces = [piece for row in self.board for piece in row if piece is not None and piece.color == turn]
 
-
+        # Mainloop where moves should be extracted, checked and appended to List
         for y, row in enumerate(self.board):
             for x, col in enumerate(row):
                 piece = self.board[y][x]
                 if piece in pieces:
-
-                    # Mainloop where the moves should be extracted and checked
                     piece_type = piece.fen_char
+                    piece_color = piece.color
                     offsets = self.move_directions[piece_type]
 
+                    # PAWNS TODO Needs extra logic for double move, en passant, promotion and color difference (black vs white pawns)
                     if piece_type == 'p':
-                        if turn == ChessColor.WHITE:
-                            for i, (dx, dy) in enumerate(offsets):
-                                nx, ny = x + dx, y + dy
-                                print(f"at coor: {x}, {y} new pos is: x:{nx}, y={ny}")
+                        for i, (dx, dy) in enumerate(offsets):
+                            # flip direction if color is black (pawns are the only pieces that move differently based on their color)
+                            if turn == ChessColor.WHITE:
+                                nx = x + dx
+                                ny = y + dy
+                            else:
+                                nx = x - dx
+                                ny = y - dy
 
-                                # TODO
-                                raise NotImplementedError
+                            # Straight moves (No capture)
+                            if i == 0: # single move
+                                # Square needs to be empty
+                                if self.board[ny][nx] is None:
+                                    # Promotion
+                                    if piece_color == ChessColor.WHITE and ny == 0 or piece_color == ChessColor.BLACK and ny == 7:
+                                        print(f"promotion at coor: {x}, {y} new pos is: x:{nx}, y={ny}")
+                                    # Regular single move
+                                    else:
+                                        print(f"single pawn move at coor: {x}, {y} new pos is: x:{nx}, y={ny}")
+
+                            if i == 1: # double move
+                                # Square needs to be empty
+                                if self.board[ny][nx] is None and ((piece_color == ChessColor.WHITE and y == 6) or (piece_color == ChessColor.BLACK and y == 1)):
+                                    print(f"double pawn move at coor: {x}, {y} new pos is: x:{nx}, y={ny}")
+
+                            # Diagonal moves (capture) # TODO need to handle en passant her
+                            elif i in (2, 3):
+                                # Square needs to be taken
+                                if self.board[ny][nx] is not None:
+                                    print(f"diagonal pawn move at coor: {x}, {y} new pos is: x:{nx}, y={ny}")
+
+                                # en passant
+                                if self.en_passant_square is not None and (nx, ny) == (self.en_passant_square.x, self.en_passant_square.y):
+                                    print(f"en passant at coor: {x}, {y} new pos is: x:{nx}, y={ny}")
+
+
+                                
+                    
+
+                    # KINGS TODO Needs extra logic for castling (but no check and checkmate validation here yet)
+                    elif piece_type == 'k':
+                        pass
+
+
+                    # KNIGHTS
+                    elif piece_type == 'n':
+                        for dx, dy in offsets:
+                            # calculate new square
+                            nx = x + dx
+                            ny = y + dy
+
+                            if 0 <= nx <= 7 and 0 <= ny <= 7: # check if square in board
+                                target_piece = self.board[ny][nx]
+
+                                if target_piece is None or target_piece.color != turn:
+                                    move = ChessMove(
+                                        origin=Coordinate(x=x, y=y),
+                                        target=Coordinate(x=nx, y=ny),
+                                        promotion=None
+                                    )
+                                    # List.append(move) TODO
 
 
 
+                    # BISHOPS, ROOKS, QUEENS
+                    elif piece_type in ('b', 'r', 'q'):
+                        for dx, dy in offsets:
+                            # calculate new square
+                            nx = x + dx
+                            ny = y + dy
+
+                            while 0 <= nx <= 7 and 0 <= ny <= 7: # check if square in board
+                                target_piece = self.board[ny][nx]
+                                if target_piece is None: # square empty
+                                    move = ChessMove(
+                                        origin=Coordinate(x=x, y=y),
+                                        target=Coordinate(x=nx, y=ny),
+                                        promotion=None
+                                    )
+                                    # List.append(move) TODO
+                                    # new square:
+                                    nx += dx
+                                    ny += dy
+
+                                else: # square taken
+                                    if target_piece.color != turn:
+                                        move = ChessMove(
+                                            origin=Coordinate(x=x, y=y),
+                                            target=Coordinate(x=nx, y=ny),
+                                            promotion=None
+                                        )
+                                        # List.append(move) TODO
+                                    break # end loop because of block
+
+
+                            
 
 
 

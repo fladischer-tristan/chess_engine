@@ -94,4 +94,3 @@ class King():
         self.pinned: bool = False
         self.in_check: bool = False
         self.has_moved: bool = False
-        self.checkmated: bool = False
