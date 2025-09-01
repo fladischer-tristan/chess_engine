@@ -1,6 +1,6 @@
 from schemas import Pawn, Bishop, Knight, Rook, Queen, King
-from schemas import ChessColor, ChessMove, Coordinate
-from utils import long_algebraic_to_move
+from schemas import ChessColor, ChessMove, ChessCastling, Coordinate
+from utils import long_algebraic_to_move, move_to_long_algebraic, check_bounds
 from typing import List
 import numpy as np
 import time
@@ -61,13 +61,12 @@ class Position():
         self.attacked_fields_black: List[Coordinate]
         self.attacked_fields_black: List[Coordinate]
 
+        self.fen = fen
         # Set board to input fen
-        self.fen_to_position(fen)
+        self.fen_to_position(self.fen)
 
         # When a Pawn double moves, the square in the middle will be stored here (allows simple en passant logic)
         self.en_passant_square: Coordinate | None = None
-
-
 
 
 
@@ -133,6 +132,8 @@ class Position():
         This will probably end up being a god method, needs to be refactored later
         """
 
+        moves = [] # our List to return
+
         # get all pieces that match color
         pieces = [piece for row in self.board for piece in row if piece is not None and piece.color == turn]
 
@@ -156,39 +157,115 @@ class Position():
                                 nx = x - dx
                                 ny = y - dy
 
-                            # Straight moves (No capture)
-                            if i == 0: # single move
-                                # Square needs to be empty
-                                if self.board[ny][nx] is None:
-                                    # Promotion
-                                    if piece_color == ChessColor.WHITE and ny == 0 or piece_color == ChessColor.BLACK and ny == 7:
-                                        print(f"promotion at coor: {x}, {y} new pos is: x:{nx}, y={ny}")
-                                    # Regular single move
-                                    else:
-                                        print(f"single pawn move at coor: {x}, {y} new pos is: x:{nx}, y={ny}")
+                            if check_bounds(nx, ny):
+                                # Straight moves (No capture)
+                                if i == 0: # single move
+                                    # Square needs to be empty
+                                    if self.board[ny][nx] is None:
+                                        # Promotion
+                                        if piece_color == ChessColor.WHITE and ny == 0 or piece_color == ChessColor.BLACK and ny == 7:
+                                            for promo in ("b", "n", "q", "k"):
+                                                moves.append(ChessMove(
+                                                    origin=Coordinate(x=x, y=y),
+                                                    target=Coordinate(x=nx, y=ny),
+                                                    color=turn,
+                                                    promotion=self.fen_map[promo],
+                                                    )
+                                                )
+                                        # Regular single move
+                                        else:
+                                            moves.append(ChessMove(
+                                                    origin=Coordinate(x=x, y=y),
+                                                    target=Coordinate(x=nx, y=ny),
+                                                    color=turn,
+                                                    promotion=None,
+                                                    )
+                                                )
 
-                            if i == 1: # double move
-                                # Square needs to be empty
-                                if self.board[ny][nx] is None and ((piece_color == ChessColor.WHITE and y == 6) or (piece_color == ChessColor.BLACK and y == 1)):
-                                    print(f"double pawn move at coor: {x}, {y} new pos is: x:{nx}, y={ny}")
+                                if i == 1: # double move
+                                    # Square needs to be empty
+                                    if self.board[ny][nx] is None and ((piece_color == ChessColor.WHITE and y == 6) or (piece_color == ChessColor.BLACK and y == 1)):
+                                        moves.append(ChessMove(
+                                                    origin=Coordinate(x=x, y=y),
+                                                    target=Coordinate(x=nx, y=ny),
+                                                    color=turn,
+                                                    promotion=None,
+                                                    )
+                                                )
 
-                            # Diagonal moves (capture) # TODO need to handle en passant her
-                            elif i in (2, 3):
-                                # Square needs to be taken
-                                if self.board[ny][nx] is not None:
-                                    print(f"diagonal pawn move at coor: {x}, {y} new pos is: x:{nx}, y={ny}")
+                                # Diagonal moves (capture) # TODO need to handle en passant her
+                                elif i in (2, 3):
+                                    # Square needs to be taken
+                                    if self.board[ny][nx] is not None:
+                                        moves.append(ChessMove(
+                                                    origin=Coordinate(x=x, y=y),
+                                                    target=Coordinate(x=nx, y=ny),
+                                                    color=turn,
+                                                    promotion=None,
+                                                    )
+                                                )
 
-                                # en passant
-                                if self.en_passant_square is not None and (nx, ny) == (self.en_passant_square.x, self.en_passant_square.y):
-                                    print(f"en passant at coor: {x}, {y} new pos is: x:{nx}, y={ny}")
+                                    # en passant
+                                    if self.en_passant_square is not None and (nx, ny) == (self.en_passant_square.x, self.en_passant_square.y):
+                                        moves.append(ChessMove(
+                                                    origin=Coordinate(x=x, y=y),
+                                                    target=Coordinate(x=nx, y=ny),
+                                                    color=turn,
+                                                    promotion=None,
+                                                    en_passant=True
+                                                    )
+                                                )
 
 
                                 
-                    
-
                     # KINGS TODO Needs extra logic for castling (but no check and checkmate validation here yet)
                     elif piece_type == 'k':
-                        pass
+                        for dx, dy in offsets:
+                            # calculate new square
+                            nx = x + dx
+                            ny = y + dy
+
+                            if check_bounds(nx, ny):
+                                target_piece = self.board[ny][nx]
+
+                                if target_piece is None or target_piece.color != turn:
+                                    moves.append(ChessMove(
+                                                    origin=Coordinate(x=x, y=y),
+                                                    target=Coordinate(x=nx, y=ny),
+                                                    color=turn,
+                                                    promotion=None,
+                                                    )
+                                                )
+
+                        # CASTLING
+                        if not piece.has_moved:
+                            # QUEENSIDE
+                            q_target = self.board[y][x - 4]
+                            
+                            if isinstance(q_target, Rook) and q_target.has_moved is False and q_target.color is turn:
+                                if all(self.board[y][x - i] is None for i in range(1, 4)):
+                                    moves.append(ChessMove(
+                                        origin=Coordinate(x=x, y=y),
+                                        target=Coordinate(x=x-2, y=y),
+                                        color=turn,
+                                        promotion=None,
+                                        castling=ChessCastling.QUEENSIDE
+                                        )
+                                    )
+
+                            # KINGSIDE
+                            k_target = self.board[y][x + 3]
+                            if isinstance(k_target, Rook) and k_target.has_moved is False and k_target.color is turn:
+                                if all(self.board[y][x + i] is None for i in range(1, 3)):
+                                    moves.append(ChessMove(
+                                        origin=Coordinate(x=x, y=y),
+                                        target=Coordinate(x=x+2, y=y),
+                                        color=turn,
+                                        promotion=None,
+                                        castling=ChessCastling.KINGSIDE
+                                        )
+                                    )
+                                
 
 
                     # KNIGHTS
@@ -198,16 +275,17 @@ class Position():
                             nx = x + dx
                             ny = y + dy
 
-                            if 0 <= nx <= 7 and 0 <= ny <= 7: # check if square in board
+                            if check_bounds(nx, ny):
                                 target_piece = self.board[ny][nx]
 
                                 if target_piece is None or target_piece.color != turn:
-                                    move = ChessMove(
+                                    moves.append(ChessMove(
                                         origin=Coordinate(x=x, y=y),
                                         target=Coordinate(x=nx, y=ny),
+                                        color=turn,
                                         promotion=None
+                                        )
                                     )
-                                    # List.append(move) TODO
 
 
 
@@ -218,30 +296,32 @@ class Position():
                             nx = x + dx
                             ny = y + dy
 
-                            while 0 <= nx <= 7 and 0 <= ny <= 7: # check if square in board
+                            while check_bounds(nx, ny): # check if square in board
                                 target_piece = self.board[ny][nx]
                                 if target_piece is None: # square empty
-                                    move = ChessMove(
+                                    moves.append(ChessMove(
                                         origin=Coordinate(x=x, y=y),
                                         target=Coordinate(x=nx, y=ny),
+                                        color=turn,
                                         promotion=None
+                                        )
                                     )
-                                    # List.append(move) TODO
                                     # new square:
                                     nx += dx
                                     ny += dy
 
                                 else: # square taken
                                     if target_piece.color != turn:
-                                        move = ChessMove(
+                                        moves.append(ChessMove(
                                             origin=Coordinate(x=x, y=y),
                                             target=Coordinate(x=nx, y=ny),
+                                            color=turn,
                                             promotion=None
+                                            )
                                         )
-                                        # List.append(move) TODO
                                     break # end loop because of block
 
-
+        return moves
                             
 
 
@@ -344,15 +424,20 @@ if __name__ == '__main__':
     starting_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR" 
     brd = Position(starting_fen)
     brd.print_board()
-    brd.update_attacked_fields()
-    print(f"white attacks: {len(brd.attacked_fields_white)} positions")
-    print(f"black attacks: {len(brd.attacked_fields_black)} positions")
+    pseudo_moves = brd.find_pseudo_legal_moves(turn=ChessColor.BLACK)
+    for move in pseudo_moves:
+        mystr = move_to_long_algebraic(move)
+        print(f"Computer plays: {mystr}")
+        brd.fen_to_position(starting_fen)
+        brd.move(move)
+        brd.print_board()
 
-    while True:
+
+    """while True:
         new_move = long_algebraic_to_move(str(input("Please enter a move: ")))
         brd.move(new_move)
         brd.update_attacked_fields()
         brd.print_board()
         print(f"white attacks: {len(brd.attacked_fields_white)} positions")
         print(f"black attacks: {len(brd.attacked_fields_black)} positions")
-        brd.find_pseudo_legal_moves(ChessColor.WHITE)
+        brd.find_pseudo_legal_moves(ChessColor.WHITE)"""

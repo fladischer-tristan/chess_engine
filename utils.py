@@ -26,6 +26,12 @@ coordinate_map_y = {
 }
 
 
+# simply helper func to check if coordinates are in array bound 
+def check_bounds(x: int, y: int) -> bool:
+       return 0 <= x <= 7 and 0 <= y <= 7
+
+
+
 def long_algebraic_to_move(long_alg_move: str) -> ChessMove:
         """
         Convert a string in long algebraic notation to an internal ChessMove
@@ -70,7 +76,23 @@ def move_to_long_algebraic(move: ChessMove) -> str:
         """
         Convert internal ChessMove to a string in the long algebraic notation (to display engine moves to the user)
         """
-        pass
+
+        origin_str_x, origin_str_y, target_str_x, target_str_y = "", "", "", ""
+
+        for key, val in coordinate_map_x.items():
+                if val == move.origin.x:
+                      origin_str_x = str(key)
+                if val == move.target.x:
+                      target_str_x = str(key)
+
+        for key, val in coordinate_map_y.items():
+                if val == move.origin.y:
+                      origin_str_y = str(key)
+                if val == move.target.y:
+                      target_str_y = str(key)
+
+        
+        return f"{origin_str_x}{origin_str_y}-{target_str_x}{target_str_y}"
 
 
 def validate_move(move: str) -> None:
@@ -89,4 +111,7 @@ class NotationError(Exception):
 
 
 if __name__ == '__main__':
-        long_algebraic_to_move("e2-e4")
+        #long_algebraic_to_move("e2-e4")
+        my_chess_move = ChessMove(origin=Coordinate(x=7, y=1), target=Coordinate(x=7, y=3), color=ChessColor.BLACK, promotion=None, castling=None, en_passant=False)
+        mystr = move_to_long_algebraic(my_chess_move)
+        print(mystr)

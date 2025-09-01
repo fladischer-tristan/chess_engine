@@ -20,12 +20,18 @@ class PromotionPiece(Enum):
     QUEEN = "Q"
 
 
+class ChessCastling(Enum):
+    QUEENSIDE = 0
+    KINGSIDE = 1
+
 
 class ChessMove(BaseModel):
     origin: Coordinate
     target: Coordinate
+    color: ChessColor
     promotion: None | PromotionPiece = None
-
+    castling: None | ChessCastling = None
+    en_passant: bool = False
 
 
 class Coordinate(NamedTuple):
