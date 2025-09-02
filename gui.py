@@ -1,5 +1,8 @@
 import pygame
 import os
+from position import Position
+from movegen import get_pseudo_legal_moves
+from schemas import ChessColor
 
 # Constants
 BOARD_SIZE = 640
@@ -42,7 +45,7 @@ def load_images():
         images[piece] = pygame.transform.smoothscale(image, (SQUARE_SIZE, SQUARE_SIZE))
     return images
 
-def draw_board(win):
+def draw_board(win, selected=None, moves=None):
     win.fill(BG_COLOR)
     # Draw shadow
     shadow_offset = 8
@@ -71,6 +74,18 @@ def draw_board(win):
                 SQUARE_SIZE
             )
             pygame.draw.rect(win, color, rect)
+            # Highlight selected square
+            if selected == (col, row):
+                pygame.draw.rect(win, (246, 246, 105), rect, 6, border_radius=8)
+    # Draw move dots (semi-transparent)
+    if moves:
+        dot_surface = pygame.Surface((SQUARE_SIZE, SQUARE_SIZE), pygame.SRCALPHA)
+        pygame.draw.circle(dot_surface, (120,120,120,120), (SQUARE_SIZE // 2, SQUARE_SIZE // 2), SQUARE_SIZE // 6)
+        for move in moves:
+            tx, ty = move.target.x, move.target.y
+            x = MARGIN_LEFT + tx * SQUARE_SIZE
+            y = MARGIN_TOP + ty * SQUARE_SIZE
+            win.blit(dot_surface, (x, y))
 
 def draw_pieces(win, board, images):
     for row in range(ROWS):
@@ -100,19 +115,69 @@ def draw_coordinates(win, font):
 def main():
     pygame.init()
     win = pygame.display.set_mode((WIDTH, HEIGHT))
-    pygame.display.set_caption("Chess GUI")
+    pygame.display.set_caption("Chess.com Style Chess GUI")
     images = load_images()
-    board = [row[:] for row in START_BOARD]
     font = pygame.font.SysFont("arial", COORD_FONT_SIZE, bold=True)
+
+    position = Position("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR")
+    turn = ChessColor.WHITE
+
+    selected = None
+    legal_moves = []
 
     running = True
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                mx, my = event.pos
+                bx = (mx - MARGIN_LEFT) // SQUARE_SIZE
+                by = (my - MARGIN_TOP) // SQUARE_SIZE
+                if 0 <= bx < 8 and 0 <= by < 8:
+                    piece = position.board[by][bx]
+                    if selected:
+                        # Try to move to clicked square if it's a legal move
+                        for move in legal_moves:
+                            if move.target.x == bx and move.target.y == by:
+                                position.move(move)
+                                turn = ChessColor.BLACK if turn == ChessColor.WHITE else ChessColor.WHITE
+                                selected = None
+                                legal_moves = []
+                                break
+                        else:
+                            # Select new piece if it's your color
+                            if piece and piece.color == turn:
+                                selected = (bx, by)
+                                pseudo_moves = get_pseudo_legal_moves(position, turn)
+                                legal_moves = [m for m in pseudo_moves if m.origin.x == bx and m.origin.y == by]
+                            else:
+                                selected = None
+                                legal_moves = []
+                    else:
+                        if piece and piece.color == turn:
+                            selected = (bx, by)
+                            pseudo_moves = get_pseudo_legal_moves(position, turn)
+                            legal_moves = [m for m in pseudo_moves if m.origin.x == bx and m.origin.y == by]
+                        else:
+                            selected = None
+                            legal_moves = []
 
-        draw_board(win)
-        draw_pieces(win, board, images)
+        draw_board(win, selected, legal_moves)
+        # Draw pieces from position.board
+        piece_map = {
+            'Pawn': 'P', 'Knight': 'N', 'Bishop': 'B', 'Rook': 'R', 'Queen': 'Q', 'King': 'K'
+        }
+        for row in range(ROWS):
+            for col in range(COLS):
+                piece = position.board[row][col]
+                if piece:
+                    x = MARGIN_LEFT + col * SQUARE_SIZE
+                    y = MARGIN_TOP + row * SQUARE_SIZE
+                    color = 'w' if piece.color == ChessColor.WHITE else 'b'
+                    ptype = piece_map.get(piece.__class__.__name__, '?')
+                    img_key = color + ptype
+                    win.blit(images[img_key], (x, y))
         draw_coordinates(win, font)
         pygame.display.flip()
 
