@@ -142,31 +142,33 @@ def get_pseudo_legal_moves(position: Position, turn: ChessColor) -> List[ChessMo
                         # CASTLING
                         if not piece.has_moved:
                             # QUEENSIDE
-                            q_target = board[y][x - 4]
-                            
-                            if isinstance(q_target, Rook) and q_target.has_moved == False and q_target.color == turn:
-                                if all(board[y][x - i] is None for i in range(1, 4)):
-                                    moves.append(ChessMove(
-                                        origin=Coordinate(x=x, y=y),
-                                        target=Coordinate(x=x-2, y=y),
-                                        color=turn,
-                                        promotion=None,
-                                        castling=ChessCastling.QUEENSIDE
+                            if check_bounds(x - 4, y):
+                                q_target = board[y][x - 4]
+                                
+                                if isinstance(q_target, Rook) and q_target.has_moved == False and q_target.color == turn:
+                                    if all(board[y][x - i] is None for i in range(1, 4)):
+                                        moves.append(ChessMove(
+                                            origin=Coordinate(x=x, y=y),
+                                            target=Coordinate(x=x-2, y=y),
+                                            color=turn,
+                                            promotion=None,
+                                            castling=ChessCastling.QUEENSIDE
+                                            )
                                         )
-                                    )
 
                             # KINGSIDE
-                            k_target = board[y][x + 3]
-                            if isinstance(k_target, Rook) and k_target.has_moved == False and k_target.color == turn:
-                                if all(board[y][x + i] is None for i in range(1, 3)):
-                                    moves.append(ChessMove(
-                                        origin=Coordinate(x=x, y=y),
-                                        target=Coordinate(x=x+2, y=y),
-                                        color=turn,
-                                        promotion=None,
-                                        castling=ChessCastling.KINGSIDE
+                            if check_bounds(x + 3, y):
+                                k_target = board[y][x + 3]
+                                if isinstance(k_target, Rook) and k_target.has_moved == False and k_target.color == turn:
+                                    if all(board[y][x + i] is None for i in range(1, 3)):
+                                        moves.append(ChessMove(
+                                            origin=Coordinate(x=x, y=y),
+                                            target=Coordinate(x=x+2, y=y),
+                                            color=turn,
+                                            promotion=None,
+                                            castling=ChessCastling.KINGSIDE
+                                            )
                                         )
-                                    )
                                 
 
 

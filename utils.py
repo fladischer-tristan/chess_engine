@@ -28,7 +28,7 @@ coordinate_map_y = {
 
 # simply helper func to check if coordinates are in array bound 
 def check_bounds(x: int, y: int) -> bool:
-       return 0 <= x <= 7 and 0 <= y <= 7
+       return True if 0 <= x <= 7 and 0 <= y <= 7 else False
 
 
 
