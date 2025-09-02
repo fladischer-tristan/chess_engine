@@ -1,7 +1,7 @@
 from __future__ import annotations
 from enum import Enum
 from pydantic import BaseModel
-from typing import NamedTuple
+from typing import NamedTuple, Optional
 
 """
 This File declares different Classes that serve as Blueprints, Models or Datastructures for the Engine.
@@ -25,20 +25,21 @@ class ChessCastling(Enum):
     KINGSIDE = 1
 
 
-class ChessMove(BaseModel):
-    origin: Coordinate
-    target: Coordinate
-    color: ChessColor
-    promotion: None | PromotionPiece = None
-    castling: None | ChessCastling = None
-    en_passant: bool = False
-
-
 class Coordinate(NamedTuple):
     x: int
     y: int
 
-     
+
+class ChessMove(BaseModel):
+    origin: Coordinate
+    target: Coordinate
+    color: ChessColor
+    promotion: Optional[PromotionPiece] = None
+    castling: Optional[ChessCastling] = None
+    #captured_piece: Optional[Pawn | Bishop | Knight | Rook | Queen] = None
+    en_passant: bool = False
+    double_move: bool = False
+
 
 ###############################################################################
 # Each of the following classes represents a Piece.                      

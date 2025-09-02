@@ -71,7 +71,7 @@ def get_pseudo_legal_moves(position: Position, turn: ChessColor) -> List[ChessMo
                                                     origin=Coordinate(x=x, y=y),
                                                     target=Coordinate(x=nx, y=ny),
                                                     color=turn,
-                                                    promotion=piece,
+                                                    promotion=piece
                                                     )
                                                 )
                                         # Regular single move
@@ -80,7 +80,7 @@ def get_pseudo_legal_moves(position: Position, turn: ChessColor) -> List[ChessMo
                                                     origin=Coordinate(x=x, y=y),
                                                     target=Coordinate(x=nx, y=ny),
                                                     color=turn,
-                                                    promotion=None,
+                                                    promotion=None
                                                     )
                                                 )
 
@@ -92,6 +92,7 @@ def get_pseudo_legal_moves(position: Position, turn: ChessColor) -> List[ChessMo
                                                     target=Coordinate(x=nx, y=ny),
                                                     color=turn,
                                                     promotion=None,
+                                                    double_move=True
                                                     )
                                                 )
 
@@ -103,7 +104,7 @@ def get_pseudo_legal_moves(position: Position, turn: ChessColor) -> List[ChessMo
                                                     origin=Coordinate(x=x, y=y),
                                                     target=Coordinate(x=nx, y=ny),
                                                     color=turn,
-                                                    promotion=None,
+                                                    promotion=None
                                                     )
                                                 )
 
@@ -135,7 +136,7 @@ def get_pseudo_legal_moves(position: Position, turn: ChessColor) -> List[ChessMo
                                                     origin=Coordinate(x=x, y=y),
                                                     target=Coordinate(x=nx, y=ny),
                                                     color=turn,
-                                                    promotion=None,
+                                                    promotion=None
                                                     )
                                                 )
 

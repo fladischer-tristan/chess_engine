@@ -22,6 +22,8 @@ class Position():
         "k": King
     }
 
+
+
     # Move directions/offsets for every piece
     N, E, S, W = np.array([0, -1]), np.array([1, 0]), np.array([0, 1]), np.array([-1, 0])
 
@@ -126,11 +128,73 @@ class Position():
         """
         Play a ChessMove on the board.
         """
-        piece = self.board[move.origin.y][move.origin.x]
+        # LEGACY:
+        # This snippet was used for testing. will be removed
+        """piece = self.board[move.origin.y][move.origin.x]
         fen_char = piece.fen_char
         color = piece.color
         self.board[move.origin.y][move.origin.x] = None
-        self.board[move.target.y][move.target.x] = piece
+        self.board[move.target.y][move.target.x] = piece"""
+
+        # NEW:
+        piece = self.board[move.origin.y][move.origin.x]
+        p_type = piece.fen_char
+        color = piece.color
+
+        def regular_move(origin: Coordinate, target: Coordinate):
+            n_piece = self.board[origin.y][origin.x]
+            self.board[origin.y][origin.x] = None
+            self.board[target.y][target.x] = n_piece
+
+        if p_type in ("b", "n", "q", "r"):
+            regular_move(move.origin, move.target)
+            if p_type == "r":
+                piece.has_moved = True
+
+        elif p_type == "p":
+            regular_move(move.origin, move.target)
+            if move.double_move:
+                # new en passant square
+                self.en_passant_square = Coordinate(x=move.target.x, y=move.target.y+1) if color == ChessColor.WHITE else Coordinate(x=move.target.x, y=move.target.y-1)
+            else:
+                self.en_passant_square = None # RESET last en passant square
+            if move.promotion != None:
+                # TODO
+                self.board[move.target.y][move.target.x] = self.fen_map[move.promotion](color)
+            if move.en_passant:
+                coor_to_delete = Coordinate(x=move.target.x, y=move.target.y+1) if color == ChessColor.WHITE else Coordinate(x=move.target.x, y=move.target.y-1)
+                self.board[coor_to_delete.y][coor_to_delete.x] = None
+
+        elif p_type == "k":
+            if move.castling != None:
+                regular_move(move.origin, move.target)
+                rk_move: ChessMove
+                if move.castling == ChessCastling.KINGSIDE:
+                    # rook-kingside moves as well:
+                    rk_move = ChessMove(
+                        origin=Coordinate(x=move.origin.x+3, y=move.origin.y),
+                        target=Coordinate(x=move.origin.x+1, y=move.origin.y),
+                        color=color
+                    )
+                else:
+                    # rook-queenside moves as well:
+                    rk_move = ChessMove(
+                        origin=Coordinate(x=move.origin.x-4, y=move.origin.y),
+                        target=Coordinate(x=move.origin.x-1, y=move.origin.y),
+                        color=color
+                    )
+                # finally, move rook over king
+                regular_move(rk_move.origin, rk_move.target)
+            else:
+            # no castling:
+                regular_move(move.origin, move.target)
+            piece.has_moved = True
+
+
+
+
+
+
 
 
     def undo_move(self, move: ChessMove) -> None:
