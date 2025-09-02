@@ -45,6 +45,23 @@ class Coordinate(NamedTuple):
     y: int
 
 
+class ChessMove(BaseModel):
+    origin: Coordinate
+    target: Coordinate
+    color: ChessColor
+
+    # additional fields to allow special logic (en passant, castling...)
+    promotion: Optional[PromotionPiece] = None
+    castling: Optional[ChessCastling] = None
+    captured_piece: Optional[Pawn | Bishop | Knight | Rook | Queen] = None
+    en_passant: bool = False
+    double_move: bool = False
+
+    # keep track of latest position details, so the can undo its moves after looking through the search tree
+    prev_en_passant_square: Optional[Coordinate] = None
+    prev_castling_rights: Optional[dict[ChessColor, dict[str, bool]]] = None
+
+    model_config = {"arbitrary_types_allowed": True} # allow custom data structures (in our example: Pawn, Bishop...)
 
 
 ###############################################################################

@@ -4,6 +4,7 @@ from utils import check_bounds
 from typing import List
 import numpy as np
 import time
+import copy
 
 
 class Position():
@@ -60,14 +61,20 @@ class Position():
 
         # List of all attacked fields
         self.attacked_fields_black: List[Coordinate]
-        self.attacked_fields_black: List[Coordinate]
+        self.attacked_fields_white: List[Coordinate]
 
         self.fen = fen
-        # Set board to input fen
+        # Set starting position 
         self.fen_to_position(self.fen)
 
         # When a Pawn double moves, the square in the middle will be stored here (allows simple en passant logic)
         self.en_passant_square: Coordinate | None = None
+
+        # dict for storing castling rights
+        self.castling_rights = {
+            ChessColor.WHITE : {"kingside" : True, 'queenside' : True},
+            ChessColor.BLACK : {"kingside" : True, 'queenside' : True}
+        }
 
 
 
@@ -133,6 +140,9 @@ class Position():
         color = piece.color
         captured_piece = None
 
+        move.prev_en_passant_square = self.en_passant_square
+        move.prev_castling_rights = copy.deepcopy(self.castling_rights)
+
         def regular_move(origin: Coordinate, target: Coordinate):
             n_piece = self.board[origin.y][origin.x]
             self.board[origin.y][origin.x] = None
@@ -141,9 +151,12 @@ class Position():
         if p_type in ("b", "n", "q", "r"):
             captured_piece = self.board[move.target.y][move.target.x]
             regular_move(move.origin, move.target) 
-            if p_type == "r":
-                piece.has_moved = True
-
+            if p_type == "r":  
+                # set castling rights to false
+                if self.castling_rights[color]["kingside"] and move.origin.x == 7:
+                    self.castling_rights[color]["kingside"] = False
+                elif self.castling_rights[color]["queenside"] and move.origin.x == 0:
+                    self.castling_rights[color]["queenside"] = False
 
         elif p_type == "p":
             if not move.en_passant:
@@ -169,6 +182,7 @@ class Position():
 
         elif p_type == "k":
             if move.castling is not None:
+                captured_piece = self.board[move.target.y][move.target.x]
                 regular_move(move.origin, move.target)
                 rk_move: ChessMove
                 if move.castling == ChessCastling.KINGSIDE:
@@ -189,10 +203,9 @@ class Position():
                 regular_move(rk_move.origin, rk_move.target)
             else:
             # no castling:
-                regular_move(move.origin, move.target)
                 captured_piece = self.board[move.target.y][move.target.x]
-            piece.has_moved = True
-        self.undo_move(move, captured_piece)
+                regular_move(move.origin, move.target)
+            self.castling_rights[color]["kingside"], self.castling_rights[color]["queenside"] = False, False # disable castling rights
         return captured_piece
 
 
@@ -204,16 +217,24 @@ class Position():
         """
         color = move.color
 
+        # restore state
+        self.en_passant_square = move.prev_en_passant_square
+        self.castling_rights = move.prev_castling_rights
+
         if captured_piece is not None:
-            # revert position of attacking piece
             self.board[move.origin.y][move.origin.x] = self.board[move.target.y][move.target.x]
-            # restore lost captured piece 
+
+            if move.promotion is not None:
+                # promotion piece neeeds to be reverted to Pawn
+                self.board[move.origin.y][move.origin.x] = Pawn(color)
+            
             if not move.en_passant:
                 self.board[move.target.y][move.target.x] = captured_piece
             # same thing but en passant
             else:
                 y_cap = move.target.y + 1 if color == ChessColor.WHITE else move.target.y -1 # y coor lost pawn
                 self.board[y_cap][move.target.x] = captured_piece
+                self.board[move.target.y][move.target.x] = None  # clear target square
 
         else:
             # castling
@@ -223,6 +244,7 @@ class Position():
 
                 # revert king move
                 self.board[move.origin.y][move.origin.x] = self.board[move.target.y][move.target.x]
+                self.board[move.target.y][move.target.x] = None
 
                 # revert rook move
                 self.board[move.target.y][origin_x_rook] = self.board[move.target.y][x_pos_rook]
@@ -231,6 +253,7 @@ class Position():
             else:
             # no castling - regular move
                 self.board[move.origin.y][move.origin.x] = self.board[move.target.y][move.target.x]
+                self.board[move.target.y][move.target.x] = None
             
 
         
