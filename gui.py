@@ -4,6 +4,7 @@ import time
 from position import Position
 from movegen import get_pseudo_legal_moves
 from schemas import ChessColor
+import sys
 
 # Constants
 BOARD_SIZE = 640
@@ -198,6 +199,10 @@ def main():
         'Pawn': 'P', 'Knight': 'N', 'Bishop': 'B', 'Rook': 'R', 'Queen': 'Q', 'King': 'K'
     }
 
+    # Mute button state and position
+    mute = False
+    mute_rect = pygame.Rect(WIDTH - 60, HEIGHT // 2 - 30, 40, 40)
+
     running = True
     while running:
         for event in pygame.event.get():
@@ -205,6 +210,13 @@ def main():
                 running = False
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mx, my = event.pos
+                # Check mute button click
+                if mute_rect.collidepoint(mx, my):
+                    mute = not mute
+                    if mute:
+                        ambient_sound.set_volume(0)
+                    else:
+                        ambient_sound.set_volume(1)
                 bx = (mx - MARGIN_LEFT) // SQUARE_SIZE
                 by = (my - MARGIN_TOP) // SQUARE_SIZE
                 if 0 <= bx < 8 and 0 <= by < 8:
@@ -216,7 +228,8 @@ def main():
                                 # Animate move
                                 animate_move(win, images, position, move, piece_map, font)
                                 position.move(move)
-                                move_sound.play()
+                                if not mute:
+                                    move_sound.play()
                                 turn = ChessColor.BLACK if turn == ChessColor.WHITE else ChessColor.WHITE
                                 selected = None
                                 legal_moves = []
@@ -262,10 +275,34 @@ def main():
                     y = MARGIN_TOP + row * SQUARE_SIZE + (SQUARE_SIZE - img_rect.height) // 2
                     win.blit(img, (x, y))
         draw_coordinates(win, font)
+        # Draw mute button (simple speaker icon)
+        pygame.draw.rect(win, (60, 60, 60), mute_rect, border_radius=8)
+        # Speaker body
+        pygame.draw.polygon(win, (200,200,200), [
+            (mute_rect.left+8, mute_rect.centery-10),
+            (mute_rect.left+8, mute_rect.centery+10),
+            (mute_rect.left+20, mute_rect.centery+10),
+            (mute_rect.left+28, mute_rect.centery+18),
+            (mute_rect.left+28, mute_rect.centery-18),
+            (mute_rect.left+20, mute_rect.centery-10)
+        ])
+        # Sound waves or X
+        if mute:
+            # Draw X for muted
+            pygame.draw.line(win, (220,60,60), (mute_rect.left+32, mute_rect.centery-12), (mute_rect.left+38, mute_rect.centery+12), 4)
+            pygame.draw.line(win, (220,60,60), (mute_rect.left+38, mute_rect.centery-12), (mute_rect.left+32, mute_rect.centery+12), 4)
+        else:
+            # Draw sound waves
+            pygame.draw.arc(win, (120,120,120), (mute_rect.left+30, mute_rect.centery-14, 16, 28), 3.7, 5.6, 3)
+            pygame.draw.arc(win, (120,120,120), (mute_rect.left+34, mute_rect.centery-10, 12, 20), 3.7, 5.6, 2)
         pygame.display.flip()
 
     ambient_sound.stop()
     pygame.quit()
 
 if __name__ == "__main__":
-    main()
+    # Ensure main is defined before calling
+    try:
+        main()
+    except NameError:
+        print("Error: main() is not defined. Please check the function definition.")
