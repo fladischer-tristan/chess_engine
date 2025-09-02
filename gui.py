@@ -1,5 +1,6 @@
 import pygame
 import os
+import time
 from position import Position
 from movegen import get_pseudo_legal_moves
 from schemas import ChessColor
@@ -44,6 +45,12 @@ def load_images():
         image = pygame.image.load(img_path).convert_alpha()
         images[piece] = pygame.transform.smoothscale(image, (SQUARE_SIZE, SQUARE_SIZE))
     return images
+
+def load_sounds():
+    assets_path = os.path.join(os.path.dirname(__file__), "assets", "sound")
+    move_sound = pygame.mixer.Sound(os.path.join(assets_path, "piece_move.wav"))
+    ambient_sound = pygame.mixer.Sound(os.path.join(assets_path, "ambient.wav"))
+    return move_sound, ambient_sound
 
 def draw_board(win, selected=None, moves=None):
     win.fill(BG_COLOR)
@@ -112,18 +119,55 @@ def draw_coordinates(win, font):
         y = MARGIN_TOP + row * SQUARE_SIZE + SQUARE_SIZE // 2 - text.get_height() // 2
         win.blit(text, (x, y))
 
+def animate_move(win, images, position, move, piece_map, font):
+    # Animate piece from origin to target
+    origin_x = MARGIN_LEFT + move.origin.x * SQUARE_SIZE
+    origin_y = MARGIN_TOP + move.origin.y * SQUARE_SIZE
+    target_x = MARGIN_LEFT + move.target.x * SQUARE_SIZE
+    target_y = MARGIN_TOP + move.target.y * SQUARE_SIZE
+    color = 'w' if position.board[move.origin.y][move.origin.x].color == ChessColor.WHITE else 'b'
+    ptype = piece_map.get(position.board[move.origin.y][move.origin.x].__class__.__name__, '?')
+    img_key = color + ptype
+    frames = 12
+    for i in range(frames):
+        x = origin_x + (target_x - origin_x) * i / frames
+        y = origin_y + (target_y - origin_y) * i / frames
+        draw_board(win)
+        # Draw all pieces except moving piece
+        for row in range(ROWS):
+            for col in range(COLS):
+                if (row, col) == (move.origin.y, move.origin.x):
+                    continue
+                piece = position.board[row][col]
+                if piece:
+                    c = 'w' if piece.color == ChessColor.WHITE else 'b'
+                    pt = piece_map.get(piece.__class__.__name__, '?')
+                    k = c + pt
+                    win.blit(images[k], (MARGIN_LEFT + col * SQUARE_SIZE, MARGIN_TOP + row * SQUARE_SIZE))
+        # Draw moving piece
+        win.blit(images[img_key], (x, y))
+        draw_coordinates(win, font)
+        pygame.display.flip()
+        pygame.time.delay(20)
+
 def main():
     pygame.init()
     win = pygame.display.set_mode((WIDTH, HEIGHT))
     pygame.display.set_caption("Chess.com Style Chess GUI")
     images = load_images()
     font = pygame.font.SysFont("arial", COORD_FONT_SIZE, bold=True)
+    pygame.mixer.init()
+    move_sound, ambient_sound = load_sounds()
+    ambient_sound.play(loops=-1)
 
     position = Position("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR")
     turn = ChessColor.WHITE
 
     selected = None
     legal_moves = []
+    piece_map = {
+        'Pawn': 'P', 'Knight': 'N', 'Bishop': 'B', 'Rook': 'R', 'Queen': 'Q', 'King': 'K'
+    }
 
     running = True
     while running:
@@ -140,7 +184,10 @@ def main():
                         # Try to move to clicked square if it's a legal move
                         for move in legal_moves:
                             if move.target.x == bx and move.target.y == by:
+                                # Animate move
+                                animate_move(win, images, position, move, piece_map, font)
                                 position.move(move)
+                                move_sound.play()
                                 turn = ChessColor.BLACK if turn == ChessColor.WHITE else ChessColor.WHITE
                                 selected = None
                                 legal_moves = []
@@ -165,9 +212,6 @@ def main():
 
         draw_board(win, selected, legal_moves)
         # Draw pieces from position.board
-        piece_map = {
-            'Pawn': 'P', 'Knight': 'N', 'Bishop': 'B', 'Rook': 'R', 'Queen': 'Q', 'King': 'K'
-        }
         for row in range(ROWS):
             for col in range(COLS):
                 piece = position.board[row][col]
@@ -181,6 +225,7 @@ def main():
         draw_coordinates(win, font)
         pygame.display.flip()
 
+    ambient_sound.stop()
     pygame.quit()
 
 if __name__ == "__main__":
