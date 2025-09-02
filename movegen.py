@@ -96,7 +96,7 @@ def get_pseudo_legal_moves(position: Position, turn: ChessColor) -> List[ChessMo
                                 # Diagonal moves (capture) # TODO need to handle en passant her
                                 elif i in (2, 3):
                                     # Square needs to be taken
-                                    if board[ny][nx] is not None:
+                                    if board[ny][nx] is not None and board[ny][nx].color != turn:
                                         moves.append(ChessMove(
                                                     origin=Coordinate(x=x, y=y),
                                                     target=Coordinate(x=nx, y=ny),
@@ -138,12 +138,12 @@ def get_pseudo_legal_moves(position: Position, turn: ChessColor) -> List[ChessMo
                                                 )
 
                         # CASTLING
-                        if not piece.has_moved:
-                            # QUEENSIDE
+                        if position.castling_rights[turn]["queenside"]:
+                        # QUEENSIDE
                             if check_bounds(x - 4, y):
                                 q_target = board[y][x - 4]
                                 
-                                if isinstance(q_target, Rook) and q_target.has_moved == False and q_target.color == turn:
+                                if isinstance(q_target, Rook) and q_target.color == turn:
                                     if all(board[y][x - i] is None for i in range(1, 4)):
                                         moves.append(ChessMove(
                                             origin=Coordinate(x=x, y=y),
@@ -154,10 +154,11 @@ def get_pseudo_legal_moves(position: Position, turn: ChessColor) -> List[ChessMo
                                             )
                                         )
 
-                            # KINGSIDE
+                        if position.castling_rights[turn]["kingside"]:
+                        # KINGSIDE
                             if check_bounds(x + 3, y):
                                 k_target = board[y][x + 3]
-                                if isinstance(k_target, Rook) and k_target.has_moved == False and k_target.color == turn:
+                                if isinstance(k_target, Rook) and k_target.color == turn:
                                     if all(board[y][x + i] is None for i in range(1, 3)):
                                         moves.append(ChessMove(
                                             origin=Coordinate(x=x, y=y),
