@@ -52,7 +52,7 @@ def load_sounds():
     ambient_sound = pygame.mixer.Sound(os.path.join(assets_path, "ambient.wav"))
     return move_sound, ambient_sound
 
-def draw_board(win, selected=None, moves=None):
+def draw_board(win, selected=None, moves=None, position=None):
     win.fill(BG_COLOR)
     # Draw shadow
     shadow_offset = 8
@@ -88,11 +88,23 @@ def draw_board(win, selected=None, moves=None):
     if moves:
         dot_surface = pygame.Surface((SQUARE_SIZE, SQUARE_SIZE), pygame.SRCALPHA)
         pygame.draw.circle(dot_surface, (120,120,120,120), (SQUARE_SIZE // 2, SQUARE_SIZE // 2), SQUARE_SIZE // 6)
+        # Overlay for captures: hollow circle, same color as move dot
+        capture_surface = pygame.Surface((SQUARE_SIZE, SQUARE_SIZE), pygame.SRCALPHA)
+        pygame.draw.circle(capture_surface, (120,120,120,120), (SQUARE_SIZE // 2, SQUARE_SIZE // 2), SQUARE_SIZE // 3, width=5)
         for move in moves:
             tx, ty = move.target.x, move.target.y
-            x = MARGIN_LEFT + tx * SQUARE_SIZE
-            y = MARGIN_TOP + ty * SQUARE_SIZE
-            win.blit(dot_surface, (x, y))
+            # Check if move is a capture (target square has opponent piece or en passant)
+            is_capture = False
+            if hasattr(move, 'en_passant') and move.en_passant:
+                is_capture = True
+            elif position and position.board[ty][tx] is not None:
+                if position.board[ty][tx].color != move.color:
+                    is_capture = True
+            if is_capture:
+                # Draw hollow capture circle on the piece
+                win.blit(capture_surface, (MARGIN_LEFT + tx * SQUARE_SIZE, MARGIN_TOP + ty * SQUARE_SIZE))
+            else:
+                win.blit(dot_surface, (MARGIN_LEFT + tx * SQUARE_SIZE, MARGIN_TOP + ty * SQUARE_SIZE))
 
 def draw_pieces(win, board, images):
     for row in range(ROWS):
@@ -129,23 +141,40 @@ def animate_move(win, images, position, move, piece_map, font):
     ptype = piece_map.get(position.board[move.origin.y][move.origin.x].__class__.__name__, '?')
     img_key = color + ptype
     frames = 12
+    # For en passant, determine captured pawn position
+    captured_pawn = None
+    if hasattr(move, 'en_passant') and move.en_passant:
+        if color == 'w':
+            captured_pawn = (move.target.x, move.target.y + 1)
+        else:
+            captured_pawn = (move.target.x, move.target.y - 1)
     for i in range(frames):
         x = origin_x + (target_x - origin_x) * i / frames
         y = origin_y + (target_y - origin_y) * i / frames
-        draw_board(win)
-        # Draw all pieces except moving piece
+        draw_board(win, position=position)
+        # Draw all pieces except moving piece and captured pawn (if en passant)
         for row in range(ROWS):
             for col in range(COLS):
                 if (row, col) == (move.origin.y, move.origin.x):
+                    continue
+                if captured_pawn and (col, row) == captured_pawn:
                     continue
                 piece = position.board[row][col]
                 if piece:
                     c = 'w' if piece.color == ChessColor.WHITE else 'b'
                     pt = piece_map.get(piece.__class__.__name__, '?')
                     k = c + pt
-                    win.blit(images[k], (MARGIN_LEFT + col * SQUARE_SIZE, MARGIN_TOP + row * SQUARE_SIZE))
-        # Draw moving piece
-        win.blit(images[img_key], (x, y))
+                    img = images[k]
+                    img_rect = img.get_rect()
+                    px = MARGIN_LEFT + col * SQUARE_SIZE + (SQUARE_SIZE - img_rect.width) // 2
+                    py = MARGIN_TOP + row * SQUARE_SIZE + (SQUARE_SIZE - img_rect.height) // 2
+                    win.blit(img, (px, py))
+        # Draw moving piece centered
+        img = images[img_key]
+        img_rect = img.get_rect()
+        cx = x + (SQUARE_SIZE - img_rect.width) // 2
+        cy = y + (SQUARE_SIZE - img_rect.height) // 2
+        win.blit(img, (cx, cy))
         draw_coordinates(win, font)
         pygame.display.flip()
         pygame.time.delay(20)
@@ -210,18 +239,28 @@ def main():
                             selected = None
                             legal_moves = []
 
-        draw_board(win, selected, legal_moves)
-        # Draw pieces from position.board
+        draw_board(win, selected, legal_moves, position)
+        # Draw pieces using draw_pieces for reliability
+        # Map piece objects to image keys
+        board_img_keys = [[None for _ in range(COLS)] for _ in range(ROWS)]
         for row in range(ROWS):
             for col in range(COLS):
                 piece = position.board[row][col]
                 if piece:
-                    x = MARGIN_LEFT + col * SQUARE_SIZE
-                    y = MARGIN_TOP + row * SQUARE_SIZE
                     color = 'w' if piece.color == ChessColor.WHITE else 'b'
                     ptype = piece_map.get(piece.__class__.__name__, '?')
                     img_key = color + ptype
-                    win.blit(images[img_key], (x, y))
+                    board_img_keys[row][col] = img_key
+        # Draw pieces
+        for row in range(ROWS):
+            for col in range(COLS):
+                img_key = board_img_keys[row][col]
+                if img_key:
+                    img = images[img_key]
+                    img_rect = img.get_rect()
+                    x = MARGIN_LEFT + col * SQUARE_SIZE + (SQUARE_SIZE - img_rect.width) // 2
+                    y = MARGIN_TOP + row * SQUARE_SIZE + (SQUARE_SIZE - img_rect.height) // 2
+                    win.blit(img, (x, y))
         draw_coordinates(win, font)
         pygame.display.flip()
 
