@@ -123,23 +123,15 @@ class Position():
 
 
 
-
-    def move(self, move: ChessMove) -> None:
+    def move(self, move: ChessMove) -> None | Pawn | Bishop | Knight | Rook | Queen:
         """
-        Play a ChessMove on the board.
+        Play a ChessMove on the board, returns captured piece if any
         """
-        # LEGACY:
-        # This snippet was used for testing. will be removed
-        """piece = self.board[move.origin.y][move.origin.x]
-        fen_char = piece.fen_char
-        color = piece.color
-        self.board[move.origin.y][move.origin.x] = None
-        self.board[move.target.y][move.target.x] = piece"""
 
-        # NEW:
         piece = self.board[move.origin.y][move.origin.x]
         p_type = piece.fen_char
         color = piece.color
+        captured_piece = None
 
         def regular_move(origin: Coordinate, target: Coordinate):
             n_piece = self.board[origin.y][origin.x]
@@ -147,26 +139,36 @@ class Position():
             self.board[target.y][target.x] = n_piece
 
         if p_type in ("b", "n", "q", "r"):
-            regular_move(move.origin, move.target)
+            captured_piece = self.board[move.target.y][move.target.x]
+            regular_move(move.origin, move.target) 
             if p_type == "r":
                 piece.has_moved = True
 
+
         elif p_type == "p":
-            regular_move(move.origin, move.target)
+            if not move.en_passant:
+                captured_piece = self.board[move.target.y][move.target.x]
+
+            # Double Move - set en passant square
             if move.double_move:
-                # new en passant square
                 self.en_passant_square = Coordinate(x=move.target.x, y=move.target.y+1) if color == ChessColor.WHITE else Coordinate(x=move.target.x, y=move.target.y-1)
+                regular_move(move.origin, move.target)
             else:
                 self.en_passant_square = None # RESET last en passant square
-            if move.promotion != None:
-                # TODO
-                self.board[move.target.y][move.target.x] = self.fen_map[move.promotion](color)
+                regular_move(move.origin, move.target)
+
+            # Promotion
+            if move.promotion is not None:
+                self.board[move.target.y][move.target.x] = move.promotion.to_piece(color)
+
+            # En Passant
             if move.en_passant:
-                coor_to_delete = Coordinate(x=move.target.x, y=move.target.y+1) if color == ChessColor.WHITE else Coordinate(x=move.target.x, y=move.target.y-1)
-                self.board[coor_to_delete.y][coor_to_delete.x] = None
+                cap_y = move.target.y + 1 if color == ChessColor.WHITE else move.target.y - 1
+                captured_piece = self.board[cap_y][move.target.x]
+                self.board[cap_y][move.target.x] = None
 
         elif p_type == "k":
-            if move.castling != None:
+            if move.castling is not None:
                 regular_move(move.origin, move.target)
                 rk_move: ChessMove
                 if move.castling == ChessCastling.KINGSIDE:
@@ -188,20 +190,49 @@ class Position():
             else:
             # no castling:
                 regular_move(move.origin, move.target)
+                captured_piece = self.board[move.target.y][move.target.x]
             piece.has_moved = True
+        self.undo_move(move, captured_piece)
+        return captured_piece
 
 
 
 
-
-
-
-
-    def undo_move(self, move: ChessMove) -> None:
+    def undo_move(self, move: ChessMove, captured_piece: None | Pawn | Bishop | Knight | Rook | Queen) -> None:
         """
         Undoes a move. Needed for in-place search algorithm. Otherwise we would need thousands of position objects. 
         """
-        pass
+        color = move.color
+
+        if captured_piece is not None:
+            # revert position of attacking piece
+            self.board[move.origin.y][move.origin.x] = self.board[move.target.y][move.target.x]
+            # restore lost captured piece 
+            if not move.en_passant:
+                self.board[move.target.y][move.target.x] = captured_piece
+            # same thing but en passant
+            else:
+                y_cap = move.target.y + 1 if color == ChessColor.WHITE else move.target.y -1 # y coor lost pawn
+                self.board[y_cap][move.target.x] = captured_piece
+
+        else:
+            # castling
+            if move.castling is not None:
+                x_pos_rook = move.target.x + 1 if move.castling == ChessCastling.QUEENSIDE else move.target.x - 1
+                origin_x_rook = 0 if move.castling == ChessCastling.QUEENSIDE else 7
+
+                # revert king move
+                self.board[move.origin.y][move.origin.x] = self.board[move.target.y][move.target.x]
+
+                # revert rook move
+                self.board[move.target.y][origin_x_rook] = self.board[move.target.y][x_pos_rook]
+                self.board[move.target.y][x_pos_rook] = None
+
+            else:
+            # no castling - regular move
+                self.board[move.origin.y][move.origin.x] = self.board[move.target.y][move.target.x]
+            
+
         
         
     def fen_to_position(self, fen: str) -> None:

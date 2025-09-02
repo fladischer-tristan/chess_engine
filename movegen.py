@@ -11,9 +11,6 @@ This File implements functions related to chess-move generation.
 def filter_legal_moves(self, position: Position, pseudo_legal_moves: List[ChessMove]) -> List[ChessMove]:
         """
         Filter the true legal moves out of our pseudo-legal-ones and return them
-
-        TODO function needs to play each pseudo legal move and evaluate if the king is in check afterwards.
-        TODO the only exception is castling, because here we also need to check if the squares the king moves on are attacked.
         """
         for y, row in enumerate(self.board):
             for x, col in enumerate(row):
@@ -66,12 +63,12 @@ def get_pseudo_legal_moves(position: Position, turn: ChessColor) -> List[ChessMo
                                     if board[ny][nx] is None:
                                         # Promotion
                                         if piece_color == ChessColor.WHITE and ny == 0 or piece_color == ChessColor.BLACK and ny == 7:
-                                            for piece in PromotionPiece:
+                                            for prom in PromotionPiece:
                                                 moves.append(ChessMove(
                                                     origin=Coordinate(x=x, y=y),
                                                     target=Coordinate(x=nx, y=ny),
                                                     color=turn,
-                                                    promotion=piece
+                                                    promotion=prom
                                                     )
                                                 )
                                         # Regular single move

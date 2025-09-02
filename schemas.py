@@ -8,6 +8,7 @@ This File declares different Classes that serve as Blueprints, Models or Datastr
 NO LOGIC in this file. Focus is on clean and somewhat modular code
 """
 
+
 class ChessColor(Enum):
     BLACK = 0
     WHITE = 1
@@ -18,6 +19,20 @@ class PromotionPiece(Enum):
     KNIGHT ="N"
     ROOK = "R"
     QUEEN = "Q"
+
+    def to_piece(self, color: ChessColor):
+        """
+        returns a piece object for linked enum
+        """
+        if self == PromotionPiece.BISHOP:
+            return Bishop(color)
+        elif self == PromotionPiece.KNIGHT:
+            return Knight(color)
+        elif self == PromotionPiece.ROOK:
+            return Rook(color)
+        elif self == PromotionPiece.QUEEN:
+            return Queen(color)
+
 
 
 class ChessCastling(Enum):
@@ -30,15 +45,6 @@ class Coordinate(NamedTuple):
     y: int
 
 
-class ChessMove(BaseModel):
-    origin: Coordinate
-    target: Coordinate
-    color: ChessColor
-    promotion: Optional[PromotionPiece] = None
-    castling: Optional[ChessCastling] = None
-    #captured_piece: Optional[Pawn | Bishop | Knight | Rook | Queen] = None
-    en_passant: bool = False
-    double_move: bool = False
 
 
 ###############################################################################
