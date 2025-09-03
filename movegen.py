@@ -44,10 +44,18 @@ def filter_legal_moves(position: Position, turn, pseudo_legal_moves: List[ChessM
         set_check(position, turn) # set king in check if he is attacked
 
         attacked_fields = position.attacked_fields_white if turn == ChessColor.BLACK else position.attacked_fields_black # new attacked fields
+        move_valid: bool = False
 
         # 2. now check if king is under attack
         king_pos = find_king(position, turn)
         move_valid = not position.board[king_pos.y][king_pos.x].in_check
+
+        # extra check for castling
+        if move.castling is not None: # castling - need to check squares in between rook and king too
+            if move.castling == ChessCastling.KINGSIDE:
+                move_valid = all(Coordinate(x=king_pos.x-i, y=king_pos.y) not in attacked_fields for i in (0, 1))
+            elif move.castling == ChessCastling.QUEENSIDE:
+                move_valid = all(Coordinate(x=king_pos.x-i, y=king_pos.y) not in attacked_fields for i in (0, 1))
 
         # 3. move is valid if king is not under attack
         if move_valid:
