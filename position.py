@@ -79,17 +79,11 @@ class Position():
 
 
     ###############################################################################
-    # Find out how many squares each Piece "sees" and updates the instance lists.
-    # This might be useful to find Pinned pieces, though this function might be
-    # removed if it proves useless. Some functionality might be similar to other
-    # methods in this class and so, obsolete.                   
-    # TODO Currently, the Pawns only check for their northern coordinates (which
-    # only white should do). Need to add offset inversion so that black Pawns only 
-    # check southern directions and white Pawns only check northern ones
+    # Check how many squares are threatened by both colors. Threatened does not 
+    # necessairily mean that there is a piece on that square!
     ###############################################################################
 
     def update_attacked_fields(self) -> None:
-        start = time.perf_counter() # DEBUG
         attacked_fields_black: List[Coordinate] = []
         attacked_fields_white: List[Coordinate] = []
 
@@ -109,9 +103,14 @@ class Position():
 
                     for dx, dy in offsets:
                         if kind in ("p", "n", "k"): # Pieces with fixed movements
-                            new_x, new_y = x + dx, y + dy
+                            n_dy = dy
+                            if kind == "p" and piece.color == ChessColor.BLACK:
+                                n_dy = -dy  # invert pawn direction (for black pawns)
+
+                            new_x, new_y = x + dx, y + n_dy
                             if 0 <= new_x < 8 and 0 <= new_y < 8:
                                 attack_list.append(Coordinate(x=new_x, y=new_y))
+
                         else: # Sliding Pieces
                             new_x, new_y = x + dx, y + dy
                             # Multiple attacked fields in the same direction
@@ -122,11 +121,8 @@ class Position():
                                 new_x += dx
                                 new_y += dy
 
-        # NOTE might need deepcopy instead of assignment here
         self.attacked_fields_black = attacked_fields_black
         self.attacked_fields_white = attacked_fields_white
-        # DEBUG
-        print(f"elapsed time in 'update_attacked_fields()': {time.perf_counter() - start}")
 
 
 
@@ -217,25 +213,28 @@ class Position():
         """
         color = move.color
 
-        # restore state
+        # restore states
         self.en_passant_square = move.prev_en_passant_square
         self.castling_rights = move.prev_castling_rights
 
+        # Captured piece:
         if captured_piece is not None:
             self.board[move.origin.y][move.origin.x] = self.board[move.target.y][move.target.x]
 
+            # Promotion
             if move.promotion is not None:
-                # promotion piece neeeds to be reverted to Pawn
-                self.board[move.origin.y][move.origin.x] = Pawn(color)
+                self.board[move.origin.y][move.origin.x] = Pawn(color) # restore promoted piece back to Pawn
             
+            # no en passant: restore captured piece at target square
             if not move.en_passant:
                 self.board[move.target.y][move.target.x] = captured_piece
-            # same thing but en passant
+            # en passant: restore captured Pawn at correct sqaure, clean up target Square
             else:
                 y_cap = move.target.y + 1 if color == ChessColor.WHITE else move.target.y -1 # y coor lost pawn
                 self.board[y_cap][move.target.x] = captured_piece
                 self.board[move.target.y][move.target.x] = None  # clear target square
 
+        # No captured piece:
         else:
             # castling
             if move.castling is not None:
