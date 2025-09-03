@@ -31,7 +31,7 @@ def set_check(position: Position, color: ChessColor) -> None:
     position.board[king_pos.y][king_pos.x].in_check = check # set instance variable in_check accordingly
 
 
-def filter_legal_moves(self, position: Position, turn, pseudo_legal_moves: List[ChessMove]) -> List[ChessMove]:
+def filter_legal_moves(position: Position, turn, pseudo_legal_moves: List[ChessMove]) -> List[ChessMove]:
     """
     Filter the true legal moves out of our pseudo-legal-ones and return them
     """

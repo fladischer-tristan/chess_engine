@@ -2,7 +2,7 @@ import pygame
 import os
 import time
 from position import Position
-from movegen import get_pseudo_legal_moves
+from movegen import get_pseudo_legal_moves, filter_legal_moves
 from schemas import ChessColor
 
 # Constants
@@ -197,7 +197,8 @@ def main():
                             if piece and piece.color == turn:
                                 selected = (bx, by)
                                 pseudo_moves = get_pseudo_legal_moves(position, turn)
-                                legal_moves = [m for m in pseudo_moves if m.origin.x == bx and m.origin.y == by]
+                                filtered_moves = [m for m in pseudo_moves if m.origin.x == bx and m.origin.y == by]
+                                legal_moves = filter_legal_moves(position, turn, filtered_moves) # new change here: only allow truly legal moves
                             else:
                                 selected = None
                                 legal_moves = []
@@ -205,7 +206,8 @@ def main():
                         if piece and piece.color == turn:
                             selected = (bx, by)
                             pseudo_moves = get_pseudo_legal_moves(position, turn)
-                            legal_moves = [m for m in pseudo_moves if m.origin.x == bx and m.origin.y == by]
+                            filtered_moves = [m for m in pseudo_moves if m.origin.x == bx and m.origin.y == by]
+                            legal_moves = filter_legal_moves(position, turn, filtered_moves) # new change here: only allow truly legal moves
                         else:
                             selected = None
                             legal_moves = []
