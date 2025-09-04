@@ -4,6 +4,7 @@ import time
 from position import Position
 from movegen import get_pseudo_legal_moves, filter_legal_moves
 from schemas import ChessColor
+from evaluation import evaluate_position
 
 # Constants
 BOARD_SIZE = 640
@@ -187,6 +188,8 @@ def main():
                                 # Animate move
                                 animate_move(win, images, position, move, piece_map, font)
                                 position.move(move)
+                                score = evaluate_position(position)
+                                print(score)
                                 move_sound.play()
                                 turn = ChessColor.BLACK if turn == ChessColor.WHITE else ChessColor.WHITE
                                 selected = None

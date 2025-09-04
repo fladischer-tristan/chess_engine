@@ -66,7 +66,13 @@ class ChessMove(BaseModel):
 
 ###############################################################################
 # Each of the following classes represents a Piece.                      
-# NOTE: Some attributes might not be useful. Might get refactored     
+# NOTE: These classes have turned out to be overkill. While the bot is not 
+# supposed to be lightning fast, it would still be better and more simplistic
+# to just represent the pieces as strings, such as 'p' for black pawns and
+# 'P' for white pawns. this is not only more efficient but removes boiler plate
+# code that these objects have a lot of. With the help of some functionality
+# that would abstract these characters, we would have the same program but a
+# lot more tidy and efficient.
 ###############################################################################
 
 

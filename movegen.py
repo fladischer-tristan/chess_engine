@@ -31,7 +31,16 @@ def set_check(position: Position, color: ChessColor) -> None:
     position.board[king_pos.y][king_pos.x].in_check = check # set instance variable in_check accordingly
 
 
-def filter_legal_moves(position: Position, turn, pseudo_legal_moves: List[ChessMove]) -> List[ChessMove]:
+def generate_moves(position: Position, turn: ChessColor) -> List[ChessMove]:
+    """
+    first calculates pseudo legal moves, then extract true legal moves and return them
+    """
+    pseudo_legal_moves = get_pseudo_legal_moves(position, turn) # pseudo legal moves
+    true_legal_moves = filter_legal_moves(position, turn, pseudo_legal_moves) # true legal moves
+    return true_legal_moves
+
+
+def filter_legal_moves(position: Position, turn: ChessColor, pseudo_legal_moves: List[ChessMove]) -> List[ChessMove]:
     """
     Filter the true legal moves out of our pseudo-legal-ones and return them
     """
@@ -41,7 +50,7 @@ def filter_legal_moves(position: Position, turn, pseudo_legal_moves: List[ChessM
     for move in pseudo_legal_moves:
         captured_piece = position.move(move) # 1. play pseudo_legal_move
         position.update_attacked_fields()
-        set_check(position, turn) # set king in check if he is attacked
+        set_check(position, turn) # set king in check if he is attacked TODO need to test if this statement breaks anything
 
         attacked_fields = position.attacked_fields_white if turn == ChessColor.BLACK else position.attacked_fields_black # new attacked fields
         move_valid: bool = False
