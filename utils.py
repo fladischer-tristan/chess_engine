@@ -31,7 +31,7 @@ def check_bounds(x: int, y: int) -> bool:
         return True if 0 <= x <= 7 and 0 <= y <= 7 else False
 
 
-def long_algebraic_to_move(long_alg_move: str) -> ChessMove:
+def long_algebraic_to_move(long_alg_move: str, color: ChessColor) -> ChessMove:
         """
         Convert a string in long algebraic notation to an internal ChessMove
 
@@ -56,15 +56,11 @@ def long_algebraic_to_move(long_alg_move: str) -> ChessMove:
         # 7 chars means there is a promotion
         if len(long_alg_move) == 7:
                 promotion = PromotionPiece(long_alg_move[6])
-                
-        # Debug purposes - will be removed
-        print(f"start: {starting_pos}")
-        print(f"target: {target_pos}")
-        print(f"promotion: {promotion}")
 
         return ChessMove(
             origin=starting_pos,
             target=target_pos,
+            color=color,
             promotion=promotion
         )
 

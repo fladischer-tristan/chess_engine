@@ -50,26 +50,39 @@ def filter_legal_moves(position: Position, turn: ChessColor, pseudo_legal_moves:
     for move in pseudo_legal_moves:
         captured_piece = position.move(move) # 1. play pseudo_legal_move
         position.update_attacked_fields()
-        set_check(position, turn) # set king in check if he is attacked TODO need to test if this statement breaks anything
+        #set_check(position, turn) # set king in check if he is attacked TODO need to test if this statement breaks anything
 
         attacked_fields = position.attacked_fields_white if turn == ChessColor.BLACK else position.attacked_fields_black # new attacked fields
         move_valid: bool = False
 
         # 2. now check if king is under attack
         king_pos = find_king(position, turn)
-        move_valid = not position.board[king_pos.y][king_pos.x].in_check
+        #move_valid = not position.board[king_pos.y][king_pos.x].in_check #BUG in_check flag does not work correctly!!
+
+        attacked_fields = (
+            position.attacked_fields_white if turn == ChessColor.BLACK
+            else position.attacked_fields_black
+        )
+        move_valid = king_pos not in attacked_fields
+
 
         # extra check for castling
-        if move.castling is not None: # castling - need to check squares in between rook and king too
+        if move.castling is not None:
             if move.castling == ChessCastling.KINGSIDE:
-                move_valid = all(Coordinate(x=king_pos.x-i, y=king_pos.y) not in attacked_fields for i in (0, 1))
-            elif move.castling == ChessCastling.QUEENSIDE:
-                move_valid = all(Coordinate(x=king_pos.x-i, y=king_pos.y) not in attacked_fields for i in (0, 1))
+                squares_to_check = [0, 1, 2]  # start, f1/f8, g1/g8
+            else:  # QUEENSIDE
+                squares_to_check = [0, -1, -2]  # start, d1/d8, c1/c8
+
+            move_valid = all(
+                Coordinate(x=king_pos.x + dx, y=king_pos.y) not in attacked_fields
+                for dx in squares_to_check
+            )
 
         # 3. move is valid if king is not under attack
         if move_valid:
             legal_moves.append(move)
         position.undo_move(move, captured_piece) # 3. reset the played pseudo_legal_move
+        #set_check(position, turn) # try to set king back
     return legal_moves
         
 
@@ -136,14 +149,16 @@ def get_pseudo_legal_moves(position: Position, turn: ChessColor) -> List[ChessMo
                             if i == 1: # double move
                                 # Square needs to be empty
                                 if board[ny][nx] is None and ((piece_color == ChessColor.WHITE and y == 6) or (piece_color == ChessColor.BLACK and y == 1)):
-                                    moves.append(ChessMove(
-                                                origin=Coordinate(x=x, y=y),
-                                                target=Coordinate(x=nx, y=ny),
-                                                color=turn,
-                                                promotion=None,
-                                                double_move=True
+                                    mid_y = y - 1 if piece_color == ChessColor.WHITE else y + 1
+                                    if board[mid_y][nx] is None:
+                                        moves.append(ChessMove(
+                                                    origin=Coordinate(x=x, y=y),
+                                                    target=Coordinate(x=nx, y=ny),
+                                                    color=turn,
+                                                    promotion=None,
+                                                    double_move=True
+                                                    )
                                                 )
-                                            )
 
                             # Diagonal moves (capture) # TODO need to handle en passant her
                             elif i in (2, 3):
@@ -159,14 +174,16 @@ def get_pseudo_legal_moves(position: Position, turn: ChessColor) -> List[ChessMo
 
                                 # en passant
                                 if position.en_passant_square is not None and (nx, ny) == (position.en_passant_square.x, position.en_passant_square.y):
-                                    moves.append(ChessMove(
-                                                origin=Coordinate(x=x, y=y),
-                                                target=Coordinate(x=nx, y=ny),
-                                                color=turn,
-                                                promotion=None,
-                                                en_passant=True
+                                    allowed_y = 3 if turn == ChessColor.WHITE else 4
+                                    if y == allowed_y:
+                                        moves.append(ChessMove(
+                                                    origin=Coordinate(x=x, y=y),
+                                                    target=Coordinate(x=nx, y=ny),
+                                                    color=turn,
+                                                    promotion=None,
+                                                    en_passant=True
+                                                    )
                                                 )
-                                            )
 
 
                             
@@ -196,7 +213,7 @@ def get_pseudo_legal_moves(position: Position, turn: ChessColor) -> List[ChessMo
                             q_target = board[y][x - 4]
                             
                             if isinstance(q_target, Rook) and q_target.color == turn:
-                                if all(board[y][x - i] is None for i in range(1, 4)):
+                                if all(board[y][x - i] is None for i in range(1, 3)): #TODO bug here maybe?
                                     moves.append(ChessMove(
                                         origin=Coordinate(x=x, y=y),
                                         target=Coordinate(x=x-2, y=y),

@@ -132,6 +132,12 @@ class Position():
         """
 
         piece = self.board[move.origin.y][move.origin.x]
+
+        if piece is None:
+            print("ERROR: Tried to move from empty square", move)
+            self.print_board()
+            return
+
         p_type = piece.fen_char
         color = piece.color
         captured_piece = None
@@ -217,6 +223,52 @@ class Position():
         self.en_passant_square = move.prev_en_passant_square
         self.castling_rights = move.prev_castling_rights
 
+        # === Promotion ===
+        if move.promotion is not None:
+            # remove promoted piece from target
+            self.board[move.target.y][move.target.x] = None
+            # restore original pawn on origin
+            self.board[move.origin.y][move.origin.x] = Pawn(color)
+            # if a piece was captured, restore it
+            if captured_piece:
+                self.board[move.target.y][move.target.x] = captured_piece
+            return
+
+        # === Castling ===
+        if move.castling is not None:
+            # restore king
+            self.board[move.origin.y][move.origin.x] = self.board[move.target.y][move.target.x]
+            self.board[move.target.y][move.target.x] = None
+            # restore rook
+            origin_x_rook = 0 if move.castling == ChessCastling.QUEENSIDE else 7
+            rook_target_x = move.target.x - 1 if move.castling == ChessCastling.KINGSIDE else move.target.x + 1
+            self.board[move.target.y][origin_x_rook] = self.board[move.target.y][rook_target_x]
+            self.board[move.target.y][rook_target_x] = None
+            return
+
+        # === En Passant ===
+        if move.en_passant:
+            # restore moving pawn
+            self.board[move.origin.y][move.origin.x] = self.board[move.target.y][move.target.x]
+            self.board[move.target.y][move.target.x] = None
+            # restore captured pawn behind
+            y_cap = move.target.y + 1 if color == ChessColor.WHITE else move.target.y - 1
+            self.board[y_cap][move.target.x] = captured_piece
+            return
+
+        # === Normal move ===
+        self.board[move.origin.y][move.origin.x] = self.board[move.target.y][move.target.x]
+        self.board[move.target.y][move.target.x] = captured_piece
+
+        ######################################################
+        # semi working solution, but bugs when used by engine:
+        ######################################################
+        """color = move.color
+
+        # restore states
+        self.en_passant_square = move.prev_en_passant_square
+        self.castling_rights = move.prev_castling_rights
+
         # Captured piece:
         if captured_piece is not None:
             self.board[move.origin.y][move.origin.x] = self.board[move.target.y][move.target.x]
@@ -252,7 +304,7 @@ class Position():
             else:
             # no castling - regular move
                 self.board[move.origin.y][move.origin.x] = self.board[move.target.y][move.target.x]
-                self.board[move.target.y][move.target.x] = None
+                self.board[move.target.y][move.target.x] = None"""
             
 
         

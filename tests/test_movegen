@@ -1,0 +1,57 @@
+from movegen import generate_moves
+from position import Position
+from schemas import ChessColor
+
+"""
+PERFT Tests for our move generation functions (also indirectly tests undo_move()):
+"""
+
+if __name__ == '__main__':
+    def perft(pos, depth, color):
+        if depth == 0:
+            return 1
+
+        total = 0
+        moves = generate_moves(pos, color)
+        for move in moves:
+            captured_piece = pos.move(move)
+            new_color = ChessColor.WHITE if color == ChessColor.BLACK else ChessColor.BLACK
+            total += perft(pos, depth - 1, new_color)
+            pos.undo_move(move, captured_piece)
+        return total
+
+    def perft_divide(pos, depth, color):
+        moves = generate_moves(pos, color)
+        total = 0
+        for move in moves:
+            captured_piece = pos.move(move)
+            new_color = ChessColor.WHITE if color == ChessColor.BLACK else ChessColor.BLACK
+            nodes = perft(pos, depth - 1, new_color)
+            pos.undo_move(move, captured_piece)
+            print(f"{move.origin} -> {move.target}: {nodes}")
+            total += nodes
+        print(f"Total: {total}")
+        return total
+
+    # Starte mit der Standardstellung
+    pos = Position("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR")
+
+    # Normale Perft-Ausgabe
+    for d in range(1, 5):
+        nodes = perft(pos, d, ChessColor.WHITE)
+        print(f"Perft({d}) = {nodes}")
+
+    print("\nPerft Divide (Depth 3):")
+    perft_divide(pos, 3, ChessColor.WHITE)
+
+
+    # Startposition
+    pos = Position("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR")
+
+    # Normale Perft-Ausgabe
+    for d in range(1, 5):
+        nodes = perft(pos, d, ChessColor.WHITE)
+        print(f"Perft({d}) = {nodes}")
+
+    print("\nPerft Divide (Depth 3, inklusive Child-Moves Depth 2):")
+    perft_divide(pos, 3, ChessColor.WHITE)
