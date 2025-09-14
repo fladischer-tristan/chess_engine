@@ -81,7 +81,6 @@ class Pawn():
         self.fen_char: str = "p"
         self.color: ChessColor = color
         self.piece_value: int = 100 # TODO ADD CONSTANTS TABLE FOR VALUES
-        self.pinned: bool = False
 
 
 
@@ -90,7 +89,6 @@ class Bishop():
         self.fen_char = "b"
         self.color = color
         self.piece_value = 300 # TODO ADD CONSTANTS TABLE FOR VALUES
-        self.pinned: bool = False
 
 
 
@@ -99,7 +97,6 @@ class Knight():
         self.fen_char: str = "n"
         self.color: ChessColor = color
         self.piece_value: int = 300 # TODO ADD CONSTANTS TABLE FOR VALUES
-        self.pinned: bool = False
 
 
 
@@ -108,7 +105,6 @@ class Rook():
         self.fen_char: str = "r"
         self.color: ChessColor = color
         self.piece_value: int = 500 # TODO ADD CONSTANTS TABLE FOR VALUES
-        self.pinned: bool = False
         self.has_moved: bool = False
 
 
@@ -118,7 +114,6 @@ class Queen():
         self.fen_char: str = "q"
         self.color: ChessColor = color
         self.piece_value: int = 900 # TODO ADD CONSTANTS TABLE FOR VALUES
-        self.pinned: bool = False
 
 
 
@@ -127,6 +122,5 @@ class King():
         self.fen_char: str = "k"
         self.color: ChessColor = color
         self.piece_value: int = 5000 # TODO ADD CONSTANTS TABLE FOR VALUES
-        self.pinned: bool = False
         self.in_check: bool = False
         self.has_moved: bool = False

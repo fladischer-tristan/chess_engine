@@ -3,7 +3,6 @@ from schemas import ChessColor, ChessMove, ChessCastling, Coordinate
 from utils import check_bounds
 from typing import List
 import numpy as np
-import time
 import copy
 
 
@@ -77,6 +76,8 @@ class Position():
         }
 
 
+    def get_piece(self, coor: Coordinate) -> None | Pawn | Knight | Bishop | Rook | Queen | King:
+        return self.board[coor.y][coor.x]
 
     ###############################################################################
     # Check how many squares are threatened by both colors. Threatened does not 
@@ -259,52 +260,6 @@ class Position():
         # === Normal move ===
         self.board[move.origin.y][move.origin.x] = self.board[move.target.y][move.target.x]
         self.board[move.target.y][move.target.x] = captured_piece
-
-        ######################################################
-        # semi working solution, but bugs when used by engine:
-        ######################################################
-        """color = move.color
-
-        # restore states
-        self.en_passant_square = move.prev_en_passant_square
-        self.castling_rights = move.prev_castling_rights
-
-        # Captured piece:
-        if captured_piece is not None:
-            self.board[move.origin.y][move.origin.x] = self.board[move.target.y][move.target.x]
-
-            # Promotion
-            if move.promotion is not None:
-                self.board[move.origin.y][move.origin.x] = Pawn(color) # restore promoted piece back to Pawn
-            
-            # no en passant: restore captured piece at target square
-            if not move.en_passant:
-                self.board[move.target.y][move.target.x] = captured_piece
-            # en passant: restore captured Pawn at correct sqaure, clean up target Square
-            else:
-                y_cap = move.target.y + 1 if color == ChessColor.WHITE else move.target.y -1 # y coor lost pawn
-                self.board[y_cap][move.target.x] = captured_piece
-                self.board[move.target.y][move.target.x] = None  # clear target square
-
-        # No captured piece:
-        else:
-            # castling
-            if move.castling is not None:
-                x_pos_rook = move.target.x + 1 if move.castling == ChessCastling.QUEENSIDE else move.target.x - 1
-                origin_x_rook = 0 if move.castling == ChessCastling.QUEENSIDE else 7
-
-                # revert king move
-                self.board[move.origin.y][move.origin.x] = self.board[move.target.y][move.target.x]
-                self.board[move.target.y][move.target.x] = None
-
-                # revert rook move
-                self.board[move.target.y][origin_x_rook] = self.board[move.target.y][x_pos_rook]
-                self.board[move.target.y][x_pos_rook] = None
-
-            else:
-            # no castling - regular move
-                self.board[move.origin.y][move.origin.x] = self.board[move.target.y][move.target.x]
-                self.board[move.target.y][move.target.x] = None"""
             
 
         

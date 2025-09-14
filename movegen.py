@@ -9,6 +9,15 @@ This File implements functions related to chess-move generation.
 """
 
 
+piece_values = {
+    "p" : 100.0,
+    'n' : 300.0,
+    'b' : 300.0,
+    'r' : 500.0,
+    'q' : 900.0
+}
+
+
 # finds the coordinates of a king (util function)
 def find_king(position: Position, color: ChessColor) -> Coordinate:
     for y, row in enumerate(position.board):
@@ -31,13 +40,63 @@ def set_check(position: Position, color: ChessColor) -> None:
     position.board[king_pos.y][king_pos.x].in_check = check # set instance variable in_check accordingly
 
 
+
+def score_move(position: Position, move: ChessMove, turn: ChessColor) -> int:
+    score = 0
+
+    # captures
+    if move.captured_piece:
+        victim_value = piece_values[move.captured_piece.fen_char]
+        attacker_value = piece_values[position.get_piece(move.origin).fen_char]
+        score += 10_000 + victim_value - attacker_value
+
+    # promotions
+    if move.promotion:
+        score += 8_000
+
+    # checks
+    captured_piece = position.move(move)
+    position.update_attacked_fields()
+    king_color = ChessColor.WHITE if turn == ChessColor.BLACK else ChessColor.BLACK
+    attack_list = position.attacked_fields_black if turn == ChessColor.BLACK else position.attacked_fields_white
+    king_pos = find_king(position, king_color)
+
+    if king_pos in attack_list:
+        score += 5_000
+    position.undo_move(move, captured_piece)
+
+
+    # castling
+    if move.castling:
+        score += 2000
+
+    # central pawn pushes
+    if position.get_piece(move.origin).fen_char == 'p':
+        if move.target.x in (3, 4) and move.target.y in (3, 4):  
+            score += 500
+
+    return score
+
+
+
+def order_moves(position: Position, moves: List[ChessMove], turn: ChessColor) -> List[ChessMove]:
+    """
+    Orders List of moves by putting important moves (captures, checks...) at the start of the List.
+    Ordering makes alpha beta pruning much faster since weaker moves at the end of the List can be
+    ignored completely
+    """
+    return sorted(moves, key=lambda m: score_move(position, m, turn), reverse=True)
+
+
+
 def generate_moves(position: Position, turn: ChessColor) -> List[ChessMove]:
     """
     first calculates pseudo legal moves, then extract true legal moves and return them
     """
     pseudo_legal_moves = get_pseudo_legal_moves(position, turn) # pseudo legal moves
     true_legal_moves = filter_legal_moves(position, turn, pseudo_legal_moves) # true legal moves
-    return true_legal_moves
+    ordered_moves = order_moves(position, true_legal_moves, turn)
+    return ordered_moves
 
 
 def filter_legal_moves(position: Position, turn: ChessColor, pseudo_legal_moves: List[ChessMove]) -> List[ChessMove]:
@@ -50,14 +109,12 @@ def filter_legal_moves(position: Position, turn: ChessColor, pseudo_legal_moves:
     for move in pseudo_legal_moves:
         captured_piece = position.move(move) # 1. play pseudo_legal_move
         position.update_attacked_fields()
-        #set_check(position, turn) # set king in check if he is attacked TODO need to test if this statement breaks anything
 
         attacked_fields = position.attacked_fields_white if turn == ChessColor.BLACK else position.attacked_fields_black # new attacked fields
         move_valid: bool = False
 
         # 2. now check if king is under attack
         king_pos = find_king(position, turn)
-        #move_valid = not position.board[king_pos.y][king_pos.x].in_check #BUG in_check flag does not work correctly!!
 
         attacked_fields = (
             position.attacked_fields_white if turn == ChessColor.BLACK

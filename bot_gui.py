@@ -1,9 +1,11 @@
 import pygame
 import os
+import time
 from position import Position
 from movegen import get_pseudo_legal_moves, filter_legal_moves
 from schemas import ChessColor
 from evaluation import evaluate_position
+from bot import ChessBot
 
 # Constants
 BOARD_SIZE = 640
@@ -17,7 +19,7 @@ ROWS, COLS = 8, 8
 SQUARE_SIZE = BOARD_SIZE // COLS
 BOARD_COLOR_1 = (235, 236, 208)
 BOARD_COLOR_2 = (119, 149, 86)
-BG_COLOR = (32, 32, 32)  # Dark gray
+BG_COLOR = (32, 32, 32)
 COORD_COLOR = (200, 200, 200)
 COORD_FONT_SIZE = 28
 
@@ -25,17 +27,6 @@ PIECE_IMAGES = {
     "bR": "br.png", "bN": "bn.png", "bB": "bb.png", "bQ": "bq.png", "bK": "bk.png", "bP": "bp.png",
     "wR": "wr.png", "wN": "wn.png", "wB": "wb.png", "wQ": "wq.png", "wK": "wk.png", "wP": "wp.png"
 }
-
-START_BOARD = [
-    ["bR", "bN", "bB", "bQ", "bK", "bB", "bN", "bR"],
-    ["bP"] * 8,
-    [None] * 8,
-    [None] * 8,
-    [None] * 8,
-    [None] * 8,
-    ["wP"] * 8,
-    ["wR", "wN", "wB", "wQ", "wK", "wB", "wN", "wR"]
-]
 
 def load_images():
     images = {}
@@ -54,37 +45,18 @@ def load_sounds():
 
 def draw_board(win, selected=None, moves=None):
     win.fill(BG_COLOR)
-    # Draw shadow
     shadow_offset = 8
-    shadow_rect = (
-        MARGIN_LEFT + shadow_offset,
-        MARGIN_TOP + shadow_offset,
-        BOARD_SIZE,
-        BOARD_SIZE
-    )
+    shadow_rect = (MARGIN_LEFT + shadow_offset, MARGIN_TOP + shadow_offset, BOARD_SIZE, BOARD_SIZE)
     pygame.draw.rect(win, (20, 20, 20), shadow_rect, border_radius=12)
-    # Draw chessboard
-    board_rect = (
-        MARGIN_LEFT,
-        MARGIN_TOP,
-        BOARD_SIZE,
-        BOARD_SIZE
-    )
+    board_rect = (MARGIN_LEFT, MARGIN_TOP, BOARD_SIZE, BOARD_SIZE)
     pygame.draw.rect(win, (50, 50, 50), board_rect, border_radius=12)
     for row in range(ROWS):
         for col in range(COLS):
             color = BOARD_COLOR_1 if (row + col) % 2 == 0 else BOARD_COLOR_2
-            rect = (
-                MARGIN_LEFT + col * SQUARE_SIZE,
-                MARGIN_TOP + row * SQUARE_SIZE,
-                SQUARE_SIZE,
-                SQUARE_SIZE
-            )
+            rect = (MARGIN_LEFT + col * SQUARE_SIZE, MARGIN_TOP + row * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE)
             pygame.draw.rect(win, color, rect)
-            # Highlight selected square
             if selected == (col, row):
                 pygame.draw.rect(win, (246, 246, 105), rect, 6, border_radius=8)
-    # Draw move dots (semi-transparent)
     if moves:
         dot_surface = pygame.Surface((SQUARE_SIZE, SQUARE_SIZE), pygame.SRCALPHA)
         pygame.draw.circle(dot_surface, (120,120,120,120), (SQUARE_SIZE // 2, SQUARE_SIZE // 2), SQUARE_SIZE // 6)
@@ -94,24 +66,13 @@ def draw_board(win, selected=None, moves=None):
             y = MARGIN_TOP + ty * SQUARE_SIZE
             win.blit(dot_surface, (x, y))
 
-def draw_pieces(win, board, images):
-    for row in range(ROWS):
-        for col in range(COLS):
-            piece = board[row][col]
-            if piece:
-                x = MARGIN_LEFT + col * SQUARE_SIZE
-                y = MARGIN_TOP + row * SQUARE_SIZE
-                win.blit(images[piece], (x, y))
-
 def draw_coordinates(win, font):
-    # Letters (a-h) below the board
     for col in range(COLS):
         letter = chr(ord('a') + col)
         text = font.render(letter, True, COORD_COLOR)
         x = MARGIN_LEFT + col * SQUARE_SIZE + SQUARE_SIZE // 2 - text.get_width() // 2
         y = MARGIN_TOP + BOARD_SIZE + 12
         win.blit(text, (x, y))
-    # Numbers (1-8) to the left of the board
     for row in range(ROWS):
         number = str(8 - row)
         text = font.render(number, True, COORD_COLOR)
@@ -119,8 +80,27 @@ def draw_coordinates(win, font):
         y = MARGIN_TOP + row * SQUARE_SIZE + SQUARE_SIZE // 2 - text.get_height() // 2
         win.blit(text, (x, y))
 
+def draw_pieces(win, board, images):
+    for row in range(ROWS):
+        for col in range(COLS):
+            piece = board[row][col]
+            if piece:
+                color = 'w' if piece.color == ChessColor.WHITE else 'b'
+                ptype = {
+                    'Pawn': 'P',
+                    'Knight': 'N',
+                    'Bishop': 'B',
+                    'Rook': 'R',
+                    'Queen': 'Q',
+                    'King': 'K'
+                }.get(piece.__class__.__name__, '?')
+                img_key = color + ptype
+                x = MARGIN_LEFT + col * SQUARE_SIZE
+                y = MARGIN_TOP + row * SQUARE_SIZE
+                win.blit(images[img_key], (x, y))
+
+
 def animate_move(win, images, position, move, piece_map, font):
-    # Animate piece from origin to target
     origin_x = MARGIN_LEFT + move.origin.x * SQUARE_SIZE
     origin_y = MARGIN_TOP + move.origin.y * SQUARE_SIZE
     target_x = MARGIN_LEFT + move.target.x * SQUARE_SIZE
@@ -133,7 +113,6 @@ def animate_move(win, images, position, move, piece_map, font):
         x = origin_x + (target_x - origin_x) * i / frames
         y = origin_y + (target_y - origin_y) * i / frames
         draw_board(win)
-        # Draw all pieces except moving piece
         for row in range(ROWS):
             for col in range(COLS):
                 if (row, col) == (move.origin.y, move.origin.x):
@@ -144,7 +123,6 @@ def animate_move(win, images, position, move, piece_map, font):
                     pt = piece_map.get(piece.__class__.__name__, '?')
                     k = c + pt
                     win.blit(images[k], (MARGIN_LEFT + col * SQUARE_SIZE, MARGIN_TOP + row * SQUARE_SIZE))
-        # Draw moving piece
         win.blit(images[img_key], (x, y))
         draw_coordinates(win, font)
         pygame.display.flip()
@@ -165,42 +143,43 @@ def main():
 
     selected = None
     legal_moves = []
-    piece_map = {
-        'Pawn': 'P', 'Knight': 'N', 'Bishop': 'B', 'Rook': 'R', 'Queen': 'Q', 'King': 'K'
-    }
+    piece_map = {'Pawn': 'P', 'Knight': 'N', 'Bishop': 'B', 'Rook': 'R', 'Queen': 'Q', 'King': 'K'}
+
+    bot = ChessBot()
+    BOT_DEPTH = 2
+
+    move_num = 0
 
     running = True
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and turn == ChessColor.WHITE:
                 mx, my = event.pos
                 bx = (mx - MARGIN_LEFT) // SQUARE_SIZE
                 by = (my - MARGIN_TOP) // SQUARE_SIZE
                 if 0 <= bx < 8 and 0 <= by < 8:
                     piece = position.board[by][bx]
                     if selected:
-                        # Try to move to clicked square if it's a legal move
                         for move in legal_moves:
                             if move.target.x == bx and move.target.y == by:
-                                # Animate move
                                 animate_move(win, images, position, move, piece_map, font)
                                 position.move(move)
+                                move_num += 1
                                 score = evaluate_position(position)
-                                print(score)
+                                print("Player evaluation:", score)
                                 move_sound.play()
-                                turn = ChessColor.BLACK if turn == ChessColor.WHITE else ChessColor.WHITE
+                                turn = ChessColor.BLACK
                                 selected = None
                                 legal_moves = []
                                 break
                         else:
-                            # Select new piece if it's your color
                             if piece and piece.color == turn:
                                 selected = (bx, by)
                                 pseudo_moves = get_pseudo_legal_moves(position, turn)
                                 filtered_moves = [m for m in pseudo_moves if m.origin.x == bx and m.origin.y == by]
-                                legal_moves = filter_legal_moves(position, turn, filtered_moves) # new change here: only allow truly legal moves
+                                legal_moves = filter_legal_moves(position, turn, filtered_moves)
                             else:
                                 selected = None
                                 legal_moves = []
@@ -209,23 +188,35 @@ def main():
                             selected = (bx, by)
                             pseudo_moves = get_pseudo_legal_moves(position, turn)
                             filtered_moves = [m for m in pseudo_moves if m.origin.x == bx and m.origin.y == by]
-                            legal_moves = filter_legal_moves(position, turn, filtered_moves) # new change here: only allow truly legal moves
+                            legal_moves = filter_legal_moves(position, turn, filtered_moves)
                         else:
                             selected = None
                             legal_moves = []
 
+                    draw_board(win, selected, legal_moves)
+                    draw_pieces(win, position.board, images)
+                    draw_coordinates(win, font)
+                    pygame.display.flip()
+
+        # Bot move
+        if turn == ChessColor.BLACK:
+            pygame.time.delay(300)
+            if move_num >= 50:
+                #BOT_DEPTH = 3
+                pass
+            bot_move = bot.find_best_move(position, BOT_DEPTH, ChessColor.BLACK)
+            if bot_move:
+                animate_move(win, images, position, bot_move, piece_map, font)
+                position.move(bot_move)
+                print(f"bot move for depth {BOT_DEPTH}")
+                move_num += 1
+                score = evaluate_position(position)
+                print("Bot evaluation:", score)
+                move_sound.play()
+            turn = ChessColor.WHITE
+
         draw_board(win, selected, legal_moves)
-        # Draw pieces from position.board
-        for row in range(ROWS):
-            for col in range(COLS):
-                piece = position.board[row][col]
-                if piece:
-                    x = MARGIN_LEFT + col * SQUARE_SIZE
-                    y = MARGIN_TOP + row * SQUARE_SIZE
-                    color = 'w' if piece.color == ChessColor.WHITE else 'b'
-                    ptype = piece_map.get(piece.__class__.__name__, '?')
-                    img_key = color + ptype
-                    win.blit(images[img_key], (x, y))
+        draw_pieces(win, position.board, images)
         draw_coordinates(win, font)
         pygame.display.flip()
 
